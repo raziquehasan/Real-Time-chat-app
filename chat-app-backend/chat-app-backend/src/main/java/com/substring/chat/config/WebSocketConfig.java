@@ -10,25 +10,24 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
+        // Enable simple broker for topics and user-specific queues
+        // Set 10 second heartbeat for production stability
+        config.enableSimpleBroker("/topic", "/queue")
+                .setHeartbeatValue(new long[] { 10000, 10000 });
 
-        config.enableSimpleBroker("/topic");
-        // /topic/messages
-
+        // Set application destination prefix
         config.setApplicationDestinationPrefixes("/app");
-        // /app/chat
-        // server-side: @MessagingMapping("/chat)
 
-
+        // Set user destination prefix for private messages
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/chat")//connection establishment
-                .setAllowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*")
+        registry.addEndpoint("/chat") // WebSocket connection endpoint
+                .setAllowedOriginPatterns("*") // Allow all origins for production (secure with JWT)
                 .withSockJS();
     }
-    // /chat endpoint par connection apka establish hoga
 }

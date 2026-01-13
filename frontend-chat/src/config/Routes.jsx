@@ -1,14 +1,47 @@
 import React from "react";
-import { Routes, Route } from "react-router";
-import App from "../App";
-import ChatPage from "../components/ChatPage";
+import { Routes, Route, Navigate } from "react-router";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
+import ChatApp from "../pages/ChatApp";
+import Profile from "../pages/Profile";
+import ProtectedRoute from "../components/ProtectedRoute";
+import { useAuth } from "../context/AuthContext";
+
 const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+
   return (
     <Routes>
-      <Route path="/" element={<App />} />
-      <Route path="/chat" element={<ChatPage />} />
-      <Route path="/about" element={<h1>This is about page</h1>} />
-      <Route path="*" element={<h1>404 Page Not Found</h1>} />
+      {/* Public routes */}
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+      />
+      <Route
+        path="/register"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
+      />
+
+      {/* Protected routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <ChatApp />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 404 */}
+      <Route path="*" element={<h1 className="text-center mt-10 text-2xl text-white">404 Page Not Found</h1>} />
     </Routes>
   );
 };

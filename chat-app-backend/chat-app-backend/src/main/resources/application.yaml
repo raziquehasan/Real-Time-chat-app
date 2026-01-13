@@ -4,4 +4,32 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/chatapp
+      uri: ${MONGODB_URI}
+      auto-index-creation: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationAndValidationPleaseChangeThisInProduction123456789}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# Server Configuration
+server:
+  port: ${PORT:8080}
+
+# File Upload Configuration
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# CORS Configuration
+cors:
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173}
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.substring.chat: DEBUG
+    org.springframework.data.mongodb: DEBUG
