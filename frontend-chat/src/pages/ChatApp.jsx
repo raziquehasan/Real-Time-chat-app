@@ -29,7 +29,7 @@ const ChatApp = () => {
 
     const connectWebSocket = () => {
         try {
-            const socket = new SockJS('http://localhost:8080/chat');
+            const socket = new SockJS(import.meta.env.VITE_WS_URL || 'http://localhost:8080/chat');
             const client = new Client({
                 webSocketFactory: () => socket,
                 reconnectDelay: 5000,
