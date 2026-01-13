@@ -5,7 +5,7 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI}
-      auto-index-creation: true
+      auto-index-creation: false
 
 # JWT Configuration
 jwt:
