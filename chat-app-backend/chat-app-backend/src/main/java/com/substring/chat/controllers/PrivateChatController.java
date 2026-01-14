@@ -50,6 +50,7 @@ public class PrivateChatController {
                         @RequestParam(value = "content", required = false) String content) {
                 System.out.println("📂 [DEBUG] send-file endpoint hit");
                 System.out.println("   - file present: " + (file != null && !file.isEmpty()));
+                System.out.println("   - file type: " + (file != null ? file.getContentType() : "NULL"));
                 System.out.println("   - receiverId: " + receiverId);
                 System.out.println("   - content: " + content);
 
