@@ -45,9 +45,12 @@ public class PrivateChatController {
          */
         @PostMapping("/send-file")
         public ResponseEntity<?> sendFile(
-                        @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-                        @RequestParam("receiverId") String receiverId,
-                        @RequestParam(value = "content", required = false) String content) {
+                        @RequestPart("file") org.springframework.web.multipart.MultipartFile file,
+                        @RequestPart("receiverId") String receiverId,
+                        @RequestPart(value = "content", required = false) String content) {
+                if (receiverId == null || receiverId.isEmpty()) {
+                        return ResponseEntity.badRequest().body("Receiver ID is required");
+                }
                 System.out.println("📂 Incoming file upload request:");
                 System.out.println("   - ReceiverId: " + receiverId);
                 System.out.println("   - File Name: " + (file != null ? file.getOriginalFilename() : "NULL"));

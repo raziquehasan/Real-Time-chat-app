@@ -322,6 +322,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('receiverId', selectedUser.id);
+            formData.append('content', 'Voice Note');
             await privateChatAPI.sendFile(formData);
             setUploadProgress(100);
             toast.success('Voice note sent');
