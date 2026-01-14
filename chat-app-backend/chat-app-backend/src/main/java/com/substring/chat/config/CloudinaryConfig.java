@@ -22,10 +22,20 @@ public class CloudinaryConfig {
 
     @Bean
     public Cloudinary cloudinary() {
+        System.out.println("☁️ Initializing Cloudinary with:");
+        System.out.println("   - Cloud Name: " + cloudName);
+        System.out.println("   - API Key: "
+                + (apiKey != null ? "****" + apiKey.substring(Math.max(0, apiKey.length() - 4)) : "NULL"));
+
         Map<String, String> config = new HashMap<>();
         config.put("cloud_name", cloudName);
         config.put("api_key", apiKey);
         config.put("api_secret", apiSecret);
+
+        if (cloudName == null || apiKey == null || apiSecret == null) {
+            System.out.println("⚠️ WARNING: Cloudinary credentials are INCOMPLETE!");
+        }
+
         return new Cloudinary(config);
     }
 }
