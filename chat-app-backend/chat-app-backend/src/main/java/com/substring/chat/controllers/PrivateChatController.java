@@ -293,7 +293,7 @@ public class PrivateChatController {
                                                 if (partner != null) {
                                                         conversation.put("online", partner.isOnline());
                                                         conversation.put("lastSeen", partner.getLastSeen());
-                                                        conversation.put("avatar", partner.getAvatar());
+                                                        conversation.put("avatar", partner.getAvatarUrl());
                                                 }
 
                                                 return conversation;
