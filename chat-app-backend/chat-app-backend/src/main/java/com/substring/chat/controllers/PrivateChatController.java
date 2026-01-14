@@ -45,16 +45,21 @@ public class PrivateChatController {
          */
         @PostMapping("/send-file")
         public ResponseEntity<?> sendFile(
-                        @RequestPart("file") org.springframework.web.multipart.MultipartFile file,
-                        @RequestPart("receiverId") String receiverId,
-                        @RequestPart(value = "content", required = false) String content) {
-                if (receiverId == null || receiverId.isEmpty()) {
-                        return ResponseEntity.badRequest().body("Receiver ID is required");
+                        @RequestParam(value = "file", required = false) org.springframework.web.multipart.MultipartFile file,
+                        @RequestParam(value = "receiverId", required = false) String receiverId,
+                        @RequestParam(value = "content", required = false) String content) {
+                System.out.println("📂 [DEBUG] send-file endpoint hit");
+                System.out.println("   - file present: " + (file != null && !file.isEmpty()));
+                System.out.println("   - receiverId: " + receiverId);
+                System.out.println("   - content: " + content);
+
+                if (file == null || file.isEmpty()) {
+                        return ResponseEntity.badRequest().body(Map.of("message", "Required part 'file' is missing"));
                 }
-                System.out.println("📂 Incoming file upload request:");
-                System.out.println("   - ReceiverId: " + receiverId);
-                System.out.println("   - File Name: " + (file != null ? file.getOriginalFilename() : "NULL"));
-                System.out.println("   - Content: " + content);
+                if (receiverId == null || receiverId.isEmpty()) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "Required part 'receiverId' is missing"));
+                }
                 try {
                         // Get current user
                         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

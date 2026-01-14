@@ -209,9 +209,17 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             setUploading(true);
             setUploadProgress(10); // Start progress
 
+            console.log('📂 Uploading file to receiver:', selectedUser.id);
             const formData = new FormData();
             formData.append('file', selectedFile);
             formData.append('receiverId', selectedUser.id);
+            formData.append('content', selectedFile.name);
+
+            console.log('📂 FormData:', {
+                fileName: selectedFile.name,
+                receiverId: selectedUser.id,
+                content: selectedFile.name
+            });
 
             setUploadProgress(30);
             await privateChatAPI.sendFile(formData);
@@ -319,10 +327,18 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
         try {
             setUploading(true);
             setUploadProgress(10);
+            console.log('🎤 Uploading voice note to receiver:', selectedUser.id);
             const formData = new FormData();
             formData.append('file', file);
             formData.append('receiverId', selectedUser.id);
             formData.append('content', 'Voice Note');
+
+            console.log('🎤 FormData:', {
+                fileName: file.name,
+                receiverId: selectedUser.id,
+                content: 'Voice Note'
+            });
+
             await privateChatAPI.sendFile(formData);
             setUploadProgress(100);
             toast.success('Voice note sent');
