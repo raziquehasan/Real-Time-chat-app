@@ -108,6 +108,11 @@ export const privateChatAPI = {
         const response = await api.post('/api/private/send-file', formData);
         return response.data;
     },
+
+    reactToMessage: async (reactionRequest) => {
+        const response = await api.put('/api/private/react', reactionRequest);
+        return response.data;
+    },
 };
 
 // Files API calls

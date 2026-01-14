@@ -3,6 +3,8 @@ package com.substring.chat.controllers;
 import com.substring.chat.entities.PrivateMessage;
 import com.substring.chat.entities.User;
 import com.substring.chat.payload.PrivateMessageRequest;
+import com.substring.chat.payload.ReactionRequest;
+import com.substring.chat.payload.TypingRequest;
 import com.substring.chat.repositories.PrivateMessageRepository;
 import com.substring.chat.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -323,23 +325,83 @@ public class PrivateChatController {
         @GetMapping("/unread-count")
         public ResponseEntity<?> getUnreadCount() {
                 try {
-                        // Get current authenticated user
                         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                         String currentUserEmail = authentication.getName();
-
                         User currentUser = userRepository.findByEmail(currentUserEmail)
                                         .orElseThrow(() -> new RuntimeException("User not found"));
 
-                        long count = privateMessageRepository.countByReceiverIdAndIsReadFalse(currentUser.getId());
+                        List<PrivateMessage> unreadMessages = privateMessageRepository
+                                        .findByReceiverIdAndIsReadFalse(currentUser.getId());
+                        Map<String, Long> unreadCountMap = unreadMessages.stream()
+                                        .collect(Collectors.groupingBy(PrivateMessage::getSenderId,
+                                                        Collectors.counting()));
 
-                        Map<String, Object> response = new HashMap<>();
-                        response.put("count", count);
-                        return ResponseEntity.ok(response);
-
+                        return ResponseEntity.ok(unreadCountMap);
                 } catch (Exception e) {
                         Map<String, String> error = new HashMap<>();
                         error.put("message", "Failed to get unread count: " + e.getMessage());
                         return ResponseEntity.badRequest().body(error);
+                }
+        }
+
+        /**
+         * Real-time typing status
+         * Endpoint: /app/typing
+         */
+        @MessageMapping("/typing")
+        public void handleTyping(@Payload TypingRequest request) {
+                messagingTemplate.convertAndSendToUser(
+                                request.getReceiverId(),
+                                "/queue/typing",
+                                request);
+        }
+
+        /**
+         * Add emoji reaction to message
+         * PUT /api/private/react
+         */
+        @PutMapping("/react")
+        public ResponseEntity<?> reactToMessage(@RequestBody ReactionRequest request) {
+                try {
+                        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                        String email = authentication.getName();
+                        User user = userRepository.findByEmail(email)
+                                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+                        PrivateMessage message = privateMessageRepository.findById(request.getMessageId())
+                                        .orElseThrow(() -> new RuntimeException("Message not found"));
+
+                        if (message.getReactions() == null) {
+                                message.setReactions(new HashMap<>());
+                        }
+
+                        // Add or remove reaction (toggle behavior)
+                        if (request.getEmoji().equals(message.getReactions().get(user.getId()))) {
+                                message.getReactions().remove(user.getId());
+                        } else {
+                                message.getReactions().put(user.getId(), request.getEmoji());
+                        }
+
+                        privateMessageRepository.save(message);
+
+                        // Notify the other participant via WebSocket
+                        String otherUserId = message.getSenderId().equals(user.getId()) ? message.getReceiverId()
+                                        : message.getSenderId();
+
+                        Map<String, Object> reactionNotification = new HashMap<>();
+                        reactionNotification.put("messageId", message.getId());
+                        reactionNotification.put("userId", user.getId());
+                        reactionNotification.put("emoji", request.getEmoji());
+                        reactionNotification.put("reactions", message.getReactions());
+
+                        messagingTemplate.convertAndSendToUser(
+                                        otherUserId,
+                                        "/queue/reactions",
+                                        reactionNotification);
+
+                        return ResponseEntity.ok(message);
+                } catch (Exception e) {
+                        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
                 }
         }
 }

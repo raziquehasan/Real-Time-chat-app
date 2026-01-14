@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { privateChatAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { FiSend, FiPaperclip, FiMoreVertical, FiUser, FiCircle, FiFile, FiDownload, FiCheck } from 'react-icons/fi';
+import { FiSend, FiPaperclip, FiMoreVertical, FiUser, FiCircle, FiFile, FiDownload, FiCheck, FiMic, FiSquare, FiCornerUpLeft, FiX } from 'react-icons/fi';
 import { format, isToday, isYesterday, isSameDay, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -15,11 +15,19 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isTyping, setIsTyping] = useState(false);
     const [otherUserTyping, setOtherUserTyping] = useState(false);
+    const [hoveredMessageId, setHoveredMessageId] = useState(null);
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
 
     const messagesEndRef = useRef(null);
     const messageContainerRef = useRef(null);
-    const typingTimeoutRef = useRef(null);
     const fileInputRef = useRef(null);
+    const mediaRecorderRef = useRef(null);
+    const recordingIntervalRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const typingTimeoutRef = useRef(null);
+
 
     useEffect(() => {
         if (selectedUser) {
@@ -68,11 +76,12 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             `/user/queue/typing`,
             (message) => {
                 const typingNotification = JSON.parse(message.body);
-                if (typingNotification.userId === selectedUser?.id) {
+                // The backend sends back 'senderId' that corresponds to the person who is typing
+                if (typingNotification.senderId === selectedUser?.id) {
                     setOtherUserTyping(typingNotification.typing);
                     if (typingNotification.typing) {
                         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-                        typingTimeoutRef.current = setTimeout(() => setOtherUserTyping(false), 3000);
+                        typingTimeoutRef.current = setTimeout(() => setOtherUserTyping(false), 5000);
                     }
                 }
             }
@@ -91,10 +100,26 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             }
         );
 
+        const reactionSubscription = stompClient.subscribe(
+            `/user/queue/reactions`,
+            (message) => {
+                const reactionNotification = JSON.parse(message.body);
+                console.log('✅ Received reaction update:', reactionNotification);
+                setMessages((prev) =>
+                    prev.map((msg) =>
+                        msg.id === reactionNotification.messageId
+                            ? { ...msg, reactions: reactionNotification.reactions }
+                            : msg
+                    )
+                );
+            }
+        );
+
         return () => {
             if (messageSubscription) messageSubscription.unsubscribe();
             if (typingSubscription) typingSubscription.unsubscribe();
             if (readReceiptSubscription) readReceiptSubscription.unsubscribe();
+            if (reactionSubscription) reactionSubscription.unsubscribe();
         };
     }, [stompClient, stompClient?.connected, currentUser, selectedUser]);
 
@@ -133,6 +158,11 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                 receiverId: selectedUser.id,
                 receiverName: selectedUser.name,
                 content: newMessage.trim(),
+                replyTo: replyingTo ? {
+                    messageId: replyingTo.id,
+                    content: replyingTo.content,
+                    senderName: replyingTo.senderName
+                } : null
             };
 
             console.log('🔍 Attempting to send message:', messagePayload);
@@ -155,6 +185,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             }
 
             setNewMessage('');
+            setReplyingTo(null);
             handleStopTyping();
         } catch (error) {
             console.error('Failed to send message:', error);
@@ -202,12 +233,12 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
     const handleTyping = () => {
         if (!stompClient || !stompClient.connected || !selectedUser) return;
         const now = Date.now();
-        if (!isTyping || (now - (handleTyping.lastSent || 0) > 2000)) {
+        // Send typing status every 3 seconds while typing
+        if (!isTyping || (now - (handleTyping.lastSent || 0) > 3000)) {
             setIsTyping(true);
             handleTyping.lastSent = now;
             const typingNotification = {
-                userId: currentUser.id,
-                userName: currentUser.name,
+                senderId: currentUser.id,
                 receiverId: selectedUser.id,
                 typing: true,
             };
@@ -219,15 +250,14 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             }
         }
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => handleStopTyping(), 3000);
+        typingTimeoutRef.current = setTimeout(() => handleStopTyping(), 5000);
     };
 
     const handleStopTyping = () => {
         if (!stompClient || !stompClient.connected || !selectedUser || !isTyping) return;
         setIsTyping(false);
         const typingNotification = {
-            userId: currentUser.id,
-            userName: currentUser.name,
+            senderId: currentUser.id,
             receiverId: selectedUser.id,
             typing: false,
         };
@@ -236,6 +266,92 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                 destination: '/app/typing',
                 body: JSON.stringify(typingNotification)
             });
+        }
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                if (audioBlob.size > 0) {
+                    const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
+                    await sendAudioFile(audioFile);
+                }
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+            recordingIntervalRef.current = setInterval(() => {
+                setRecordingTime(prev => {
+                    if (prev >= 60) {
+                        stopRecording();
+                        return 60;
+                    }
+                    return prev + 1;
+                });
+            }, 1000);
+        } catch (error) {
+            console.error('Recording failed:', error);
+            toast.error('Could not access microphone');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            clearInterval(recordingIntervalRef.current);
+        }
+    };
+
+    const sendAudioFile = async (file) => {
+        try {
+            setUploading(true);
+            setUploadProgress(10);
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('receiverId', selectedUser.id);
+            await privateChatAPI.sendFile(formData);
+            setUploadProgress(100);
+            toast.success('Voice note sent');
+        } catch (error) {
+            toast.error('Failed to send voice note');
+        } finally {
+            setUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
+    const handleReaction = async (messageId, emoji) => {
+        try {
+            await privateChatAPI.reactToMessage({ messageId, emoji });
+            // Optimistic update
+            setMessages(prev => prev.map(msg => {
+                if (msg.id === messageId) {
+                    const newReactions = { ...(msg.reactions || {}) };
+                    if (newReactions[currentUser.id] === emoji) {
+                        delete newReactions[currentUser.id];
+                    } else {
+                        newReactions[currentUser.id] = emoji;
+                    }
+                    return { ...msg, reactions: newReactions };
+                }
+                return msg;
+            }));
+        } catch (error) {
+            console.error('Failed to react:', error);
+            toast.error('Failed to add reaction');
         }
     };
 
@@ -292,9 +408,16 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                     </div>
                     <div>
                         <h3 className="font-semibold text-white">{selectedUser.name}</h3>
-                        <p className="text-xs text-gray-400 flex items-center gap-1">
+                        <div className="text-xs text-gray-400 h-4 flex items-center">
                             {otherUserTyping ? (
-                                <span className="text-blue-400">typing...</span>
+                                <div className="flex items-center gap-1.5 text-blue-400 font-medium">
+                                    <span>typing</span>
+                                    <div className="flex gap-0.5 mt-1">
+                                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-[bounce_1s_infinite_0ms]"></div>
+                                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-[bounce_1s_infinite_200ms]"></div>
+                                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-[bounce_1s_infinite_400ms]"></div>
+                                    </div>
+                                </div>
                             ) : selectedUser.online ? (
                                 <>
                                     <FiCircle size={6} fill="currentColor" className="text-green-500" />
@@ -305,7 +428,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                                     ? `Last seen ${format(new Date(selectedUser.lastSeen), 'MMM dd, h:mm a')}`
                                     : 'Last seen recently'
                             )}
-                        </p>
+                        </div>
                     </div>
                 </div>
                 <button className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400">
@@ -350,6 +473,18 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                                                             className="max-h-80 w-full object-cover hover:opacity-90 transition-opacity"
                                                         />
                                                     </a>
+                                                ) : message.fileType?.startsWith('audio') ? (
+                                                    <div className="p-2 min-w-[250px] bg-black/10 rounded-md">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <FiMic size={16} className="text-blue-400" />
+                                                            <span className="text-[10px] font-medium opacity-60 uppercase">Voice Note</span>
+                                                        </div>
+                                                        <audio
+                                                            src={message.fileUrl}
+                                                            controls
+                                                            className="w-full h-8 brightness-90 contrast-125"
+                                                        />
+                                                    </div>
                                                 ) : (
                                                     <div className="flex items-center gap-3 p-3 bg-black/20 min-w-[200px]">
                                                         <div className="p-2 bg-gray-700 rounded-lg">
@@ -373,8 +508,70 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                                         )}
 
                                         {/* Message Content */}
-                                        <div className={`${message.fileUrl && message.fileType?.startsWith('image') ? 'px-2 pb-1' : ''}`}>
+                                        <div
+                                            className={`group relative ${message.fileUrl && message.fileType?.startsWith('image') ? 'px-2 pb-1' : ''}`}
+                                            onMouseEnter={() => setHoveredMessageId(message.id)}
+                                            onMouseLeave={() => setHoveredMessageId(message.id === hoveredMessageId ? null : hoveredMessageId)}
+                                        >
+                                            {/* Reaction Picker and Reply on Hover */}
+                                            {hoveredMessageId === message.id && (
+                                                <div className={`absolute -top-10 ${isOwnMessage ? 'right-0' : 'left-0'} z-20 bg-[#202c33] border border-gray-700 rounded-full p-1 shadow-xl flex items-center gap-1 animate-in fade-in zoom-in duration-200`}>
+                                                    <div className="flex px-1 border-r border-gray-700 mr-1">
+                                                        <button
+                                                            onClick={() => { setReplyingTo(message); setHoveredMessageId(null); }}
+                                                            className="p-1 hover:bg-gray-700 rounded-full text-blue-400 transition-colors"
+                                                            title="Reply"
+                                                        >
+                                                            <FiCornerUpLeft size={18} />
+                                                        </button>
+                                                    </div>
+                                                    {['👍', '❤️', '😂', '😮', '😢', '😡'].map(emoji => (
+                                                        <button
+                                                            key={emoji}
+                                                            onClick={() => { handleReaction(message.id, emoji); setHoveredMessageId(null); }}
+                                                            className="hover:scale-125 transition-transform p-1 text-lg"
+                                                            title={emoji}
+                                                        >
+                                                            {emoji}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Reply Preview in Message */}
+                                            {message.replyTo && (
+                                                <div className="mb-1 p-2 rounded bg-black/20 border-l-4 border-blue-500 text-[13px] opacity-80 cursor-pointer"
+                                                    onClick={() => {
+                                                        const targetMsg = document.getElementById(`msg-${message.replyTo.messageId}`);
+                                                        if (targetMsg) targetMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    }}
+                                                >
+                                                    <p className="font-bold text-blue-400 text-xs">{message.replyTo.senderName}</p>
+                                                    <p className="truncate">{message.replyTo.content}</p>
+                                                </div>
+                                            )}
+
                                             <p className="text-[15px] leading-relaxed break-words">{message.content}</p>
+
+                                            {/* Reactions Display */}
+                                            {message.reactions && Object.keys(message.reactions).length > 0 && (
+                                                <div className={`flex flex-wrap gap-0.5 mt-1 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                                                    {Object.entries(message.reactions).reduce((acc, [uid, emoji]) => {
+                                                        const existing = acc.find(r => r.emoji === emoji);
+                                                        if (existing) existing.count++;
+                                                        else acc.push({ emoji, count: 1 });
+                                                        return acc;
+                                                    }, []).map(reaction => (
+                                                        <span
+                                                            key={reaction.emoji}
+                                                            className="inline-flex items-center bg-gray-700/50 backdrop-blur-sm px-1.5 py-0.5 rounded-full text-[12px] border border-gray-600/50"
+                                                        >
+                                                            {reaction.emoji} {reaction.count > 1 && reaction.count}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
                                             <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isOwnMessage ? 'text-blue-100/70' : 'text-gray-400'}`}>
                                                 <span>{formatMessageDate(message.timestamp)}</span>
                                                 {isOwnMessage && (
@@ -409,6 +606,21 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
 
             {/* Input Area */}
             <div className="p-2 bg-[#202c33] border-t border-gray-700">
+                {/* Reply Preview Bar */}
+                {replyingTo && (
+                    <div className="max-w-6xl mx-auto mb-2 p-2 bg-[#2a3942] rounded-lg border-l-4 border-blue-500 flex items-center justify-between animate-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-blue-400">Replying to {replyingTo.senderName}</p>
+                            <p className="text-sm text-gray-400 truncate">{replyingTo.content}</p>
+                        </div>
+                        <button
+                            onClick={() => setReplyingTo(null)}
+                            className="p-1 hover:bg-white/10 rounded-full text-gray-400"
+                        >
+                            <FiX size={18} />
+                        </button>
+                    </div>
+                )}
                 <form onSubmit={sendMessage} className="flex items-center gap-2 max-w-6xl mx-auto">
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
                     <button
@@ -421,22 +633,45 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                         <FiPaperclip size={24} />
                     </button>
                     <div className="flex-1 relative">
-                        <input
-                            type="text"
-                            value={newMessage}
-                            onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-                            onBlur={handleStopTyping}
-                            placeholder="Type a message"
-                            className="w-full bg-[#2a3942] text-white px-4 py-3 rounded-xl focus:outline-none placeholder-gray-500"
-                        />
+                        {isRecording ? (
+                            <div className="flex-1 bg-[#2a3942] text-white px-4 py-3 rounded-xl flex items-center justify-between animate-pulse">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+                                    <span className="text-sm font-medium">Recording {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}</span>
+                                </div>
+                                <span className="text-xs text-gray-400">Max 60s</span>
+                            </div>
+                        ) : (
+                            <input
+                                type="text"
+                                value={newMessage}
+                                onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
+                                onBlur={handleStopTyping}
+                                placeholder="Type a message"
+                                className="w-full bg-[#2a3942] text-white px-4 py-3 rounded-xl focus:outline-none placeholder-gray-500"
+                            />
+                        )}
                     </div>
-                    <button
-                        type="submit"
-                        disabled={!newMessage.trim() || sending || uploading}
-                        className="p-3 bg-[#00a884] text-white rounded-full disabled:opacity-50 hover:bg-[#06cf9c] transition-all shadow-lg active:scale-95"
-                    >
-                        <FiSend size={24} />
-                    </button>
+                    {newMessage.trim() || isRecording ? (
+                        <button
+                            type={isRecording ? "button" : "submit"}
+                            onClick={isRecording ? stopRecording : undefined}
+                            disabled={(sending || uploading) && !isRecording}
+                            className={`p-3 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-[#00a884] hover:bg-[#06cf9c]'} text-white rounded-full transition-all shadow-lg active:scale-95`}
+                        >
+                            {isRecording ? <FiSquare size={24} /> : <FiSend size={24} />}
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={startRecording}
+                            disabled={uploading}
+                            className="p-3 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-all"
+                            title="Record voice note"
+                        >
+                            <FiMic size={24} />
+                        </button>
+                    )}
                 </form>
             </div>
         </div>

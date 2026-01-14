@@ -12,6 +12,8 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Document(collection = "private_messages")
 @CompoundIndexes({
@@ -50,6 +52,10 @@ public class PrivateMessage {
     private String fileType;
     private String fileName;
 
+    private Map<String, String> reactions = new HashMap<>(); // userId -> emoji
+
+    private ReplyDetails replyTo;
+
     public PrivateMessage(String senderId, String senderName, String receiverId, String receiverName, String content) {
         this.senderId = senderId;
         this.senderName = senderName;
@@ -58,6 +64,16 @@ public class PrivateMessage {
         this.content = content;
         this.timestamp = LocalDateTime.now();
         this.isRead = false;
-        this.isDelivered = false;
+        this.isDelivered = true;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ReplyDetails {
+        private String messageId;
+        private String content;
+        private String senderName;
     }
 }
