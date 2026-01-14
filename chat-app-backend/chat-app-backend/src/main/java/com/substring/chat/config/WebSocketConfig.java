@@ -68,6 +68,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                     com.substring.chat.entities.User user = userRepository.findByEmail(email)
                                             .orElse(null);
                                     if (user != null) {
+                                        System.out.println("✅ STOMP Authenticated: " + user.getName() + " (ID: "
+                                                + user.getId() + ")");
                                         // Create principal with ID instead of email for consistent delivery
                                         Principal principal = new Principal() {
                                             @Override
@@ -82,6 +84,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         } catch (Exception e) {
                             System.out.println("❌ STOMP Auth failed: " + e.getMessage());
                         }
+                    } else {
+                        System.out.println("⚠️ STOMP Connect without Authorization header");
                     }
                 }
                 return message;
@@ -95,8 +99,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns(
                         "http://localhost:*",
                         "http://127.0.0.1:*",
-                        "https://chatapp-eta-seven.vercel.app",
-                        "https://chatapp-raziquehasans-projects.vercel.app")
+                        "https://*.vercel.app",
+                        "https://*.onrender.com")
                 .withSockJS();
     }
 
