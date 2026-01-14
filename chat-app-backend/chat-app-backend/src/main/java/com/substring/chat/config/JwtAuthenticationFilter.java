@@ -37,14 +37,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             jwt = authorizationHeader.substring(7);
             try {
                 username = jwtUtil.extractUsername(jwt);
-                System.out
-                        .println("🔍 JWT found for request: " + request.getRequestURI() + " (User: " + username + ")");
+                System.out.println("🔍 JWT found: " + request.getRequestURI() + " (" + username + ")");
             } catch (Exception e) {
-                System.out.println(
-                        "❌ Error extracting username from JWT for " + request.getRequestURI() + ": " + e.getMessage());
+                System.out.println("❌ JWT Error (" + request.getRequestURI() + "): " + e.getMessage());
             }
         } else {
-            System.out.println("⚠️ No Authorization header found for: " + request.getRequestURI());
+            String uri = request.getRequestURI();
+            if (!uri.equals("/") && !uri.equals("/error") && !uri.contains("favicon")) {
+                System.out.println("⚠️ No Token for: " + uri);
+            }
         }
 
         // Validate token and set authentication
