@@ -46,6 +46,10 @@ public class PrivateChatController {
                         @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
                         @RequestParam("receiverId") String receiverId,
                         @RequestParam(value = "content", required = false) String content) {
+                System.out.println("📂 Incoming file upload request:");
+                System.out.println("   - ReceiverId: " + receiverId);
+                System.out.println("   - File Name: " + (file != null ? file.getOriginalFilename() : "NULL"));
+                System.out.println("   - Content: " + content);
                 try {
                         // Get current user
                         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -108,9 +112,11 @@ public class PrivateChatController {
                         return ResponseEntity.ok(savedMessage);
 
                 } catch (Exception e) {
+                        System.out.println("❌ File upload error: " + e.getMessage());
+                        e.printStackTrace();
                         Map<String, String> error = new HashMap<>();
                         error.put("message", "Failed to send file: " + e.getMessage());
-                        return ResponseEntity.badRequest().body(error);
+                        return ResponseEntity.internalServerError().body(error);
                 }
         }
 
