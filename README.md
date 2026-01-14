@@ -18,13 +18,16 @@ A premium, production-ready real-time private chat application built with **Reac
 - **Real-time Delivery**: Instant message broadcasting using STOMP over WebSockets.
 - **Typing Indicators**: Visual feedback when the recipient is typing.
 - **Read Receipts**: Real-time status updates for sent and read messages.
+- **Emoji Reactions**: Express feelings with hover-enabled message reactions.
+- **Threaded Replies**: Quote and contextually reply to specific messages with click-to-scroll navigation.
+- **Voice Notes**: Record and send voice messages (up to 60s) with an integrated audio player.
 
 ### 📁 Media & File Sharing
-- **Cloudinary Integration**: Production-ready storage for images and documents.
-- **Atomic Sending**: Integrated upload and message delivery in a single action.
-- **Previews**: High-quality image previews and dedicated file cards for PDFs/Documents.
-- **Progress Tracking**: Dynamic upload progress bar for better UX.
-- **Security**: 10MB file size limit and strict file type validation (Images/PDF/DOC/TXT).
+- **Cloudinary Integration**: Production-ready storage for images, documents, and audio.
+- **Integrated Upload**: Seamless delivery for images, PDFs, DOCs, and Voice Notes.
+- **Previews**: High-quality image previews and dedicated file cards for documents.
+- **Progress Tracking**: Dynamic upload progress bar for all shared media.
+- **Security**: 10MB file size limit and strict file type validation (Images/Audio/PDF/DOC/TXT).
 
 ### 👤 User Identity & Presence
 - **Personal Profiles**: Manage your Avatar, Bio (About), and Phone number.
@@ -97,15 +100,17 @@ npm run dev
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/private/{userId}/messages` | Get chat history |
-| POST | `/api/private/send-file` | Integrated file/media send |
-| POST | `/api/private/{senderId}/read` | Mark messages as read |
-| GET | `/api/private/conversations` | Get user's active chats |
+| POST | `/api/private/send-file` | Integrated file/media/audio send |
+| POST | `/api/private/mark-read/{senderId}` | Mark messages as read |
+| PUT  | `/api/private/react` | Toggle emoji reactions on messages |
+| GET  | `/api/private/conversations` | Get user's active chats |
 
 ### WebSocket Destinations
 - **Connection**: `ws://localhost:8080/chat`
 - **Sub /user/queue/messages**: Receive incoming private messages.
 - **Sub /user/queue/typing**: Receive typing indicators.
-- **Pub /app/private**: Send text messages.
+- **Sub /user/queue/reactions**: Receive real-time reaction updates.
+- **Pub /app/private**: Send text messages and replies.
 - **Pub /app/typing**: Send typing status.
 
 ## 👨‍💻 Author
