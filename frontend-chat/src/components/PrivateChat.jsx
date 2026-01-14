@@ -379,8 +379,8 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                                                 <span>{formatMessageDate(message.timestamp)}</span>
                                                 {isOwnMessage && (
                                                     <div className="flex">
-                                                        <FiCheck size={12} className={message.isRead ? 'text-blue-400' : ''} />
-                                                        {message.isRead && <FiCheck size={12} className="text-blue-400 -ml-2" />}
+                                                        <FiCheck size={12} className={(message.isRead || message.read) ? 'text-blue-400' : ''} />
+                                                        {(message.isRead || message.read) && <FiCheck size={12} className="text-blue-400 -ml-2" />}
                                                     </div>
                                                 )}
                                             </div>

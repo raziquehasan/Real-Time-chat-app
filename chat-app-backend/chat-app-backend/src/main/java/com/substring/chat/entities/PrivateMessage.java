@@ -1,5 +1,6 @@
 package com.substring.chat.entities;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,9 +37,11 @@ public class PrivateMessage {
     @Indexed
     private LocalDateTime timestamp;
 
+    @JsonProperty("isRead")
     private boolean isRead;
     private LocalDateTime readAt;
 
+    @JsonProperty("isDelivered")
     private boolean isDelivered;
     private LocalDateTime deliveredAt;
 
