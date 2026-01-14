@@ -5,7 +5,10 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI}
-      auto-index-creation: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 # JWT Configuration
 jwt:
