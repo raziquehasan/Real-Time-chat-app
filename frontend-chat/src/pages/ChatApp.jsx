@@ -32,9 +32,12 @@ const ChatApp = () => {
             const socket = new SockJS(import.meta.env.VITE_WS_URL || 'http://localhost:8080/chat');
             const client = new Client({
                 webSocketFactory: () => socket,
+                connectHeaders: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                },
                 reconnectDelay: 5000,
-                heartbeatIncoming: 4000,
-                heartbeatOutgoing: 4000,
+                heartbeatIncoming: 10000,
+                heartbeatOutgoing: 10000,
                 debug: (str) => {
                     console.log('STOMP: ' + str);
                 },

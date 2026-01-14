@@ -36,7 +36,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
         if (!stompClient || !stompClient.connected || !currentUser) return;
 
         const messageSubscription = stompClient.subscribe(
-            `/user/${currentUser.id}/queue/messages`,
+            `/user/queue/messages`,
             (message) => {
                 const receivedMessage = JSON.parse(message.body);
                 console.log('📨 Received message:', receivedMessage);
@@ -65,7 +65,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
         );
 
         const typingSubscription = stompClient.subscribe(
-            `/user/${currentUser.id}/queue/typing`,
+            `/user/queue/typing`,
             (message) => {
                 const typingNotification = JSON.parse(message.body);
                 if (typingNotification.userId === selectedUser?.id) {
@@ -79,13 +79,13 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
         );
 
         const readReceiptSubscription = stompClient.subscribe(
-            `/user/${currentUser.id}/queue/read-receipt`,
+            `/user/queue/read-receipt`,
             (message) => {
                 const messageIds = JSON.parse(message.body);
                 console.log('✅ Received read receipt for messages:', messageIds);
                 setMessages((prev) =>
                     prev.map((msg) =>
-                        messageIds.includes(msg.id) ? { ...msg, isRead: true } : msg
+                        messageIds.includes(msg.id) ? { ...msg, isRead: true, read: true } : msg
                     )
                 );
             }
