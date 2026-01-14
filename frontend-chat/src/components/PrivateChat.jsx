@@ -105,7 +105,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
 
     const sendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !stompClient || !stompClient.connected || !selectedUser) return;
+        if (!newMessage.trim() || !stompClient || !stompClient.connected || !stompClient.send || !selectedUser) return;
 
         try {
             setSending(true);
@@ -163,7 +163,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
     };
 
     const handleTyping = () => {
-        if (!stompClient || !stompClient.connected || !selectedUser) return;
+        if (!stompClient || !stompClient.connected || !stompClient.send || !selectedUser) return;
         const now = Date.now();
         if (!isTyping || (now - (handleTyping.lastSent || 0) > 2000)) {
             setIsTyping(true);
@@ -181,7 +181,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
     };
 
     const handleStopTyping = () => {
-        if (!stompClient || !stompClient.connected || !selectedUser || !isTyping) return;
+        if (!stompClient || !stompClient.connected || !stompClient.send || !selectedUser || !isTyping) return;
         setIsTyping(false);
         const typingNotification = {
             userId: currentUser.id,
