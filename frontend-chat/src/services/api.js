@@ -78,11 +78,7 @@ export const usersAPI = {
     },
 
     uploadAvatar: async (formData) => {
-        const response = await api.post('/api/users/upload-avatar', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        const response = await api.post('/api/users/upload-avatar', formData);
         return response.data;
     },
 };
@@ -97,7 +93,7 @@ export const privateChatAPI = {
     },
 
     markAsRead: async (senderId) => {
-        const response = await api.post(`/api/private/${senderId}/read`);
+        const response = await api.put(`/api/private/mark-read/${senderId}`);
         return response.data;
     },
 
@@ -112,11 +108,7 @@ export const privateChatAPI = {
     },
 
     sendFile: async (formData) => {
-        const response = await api.post('/api/private/send-file', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        const response = await api.post('/api/private/send-file', formData);
         return response.data;
     },
 };
