@@ -73,6 +73,7 @@ public class PrivateChatController {
                         // 0. Validate File Type
                         String contentType = file.getContentType();
                         boolean isAllowed = contentType != null && (contentType.startsWith("image/") ||
+                                        contentType.startsWith("audio/") ||
                                         contentType.equals("application/pdf") ||
                                         contentType.equals("application/msword") ||
                                         contentType.equals(
