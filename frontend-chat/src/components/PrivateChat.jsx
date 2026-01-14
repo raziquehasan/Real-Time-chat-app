@@ -33,7 +33,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
     }, [messages]);
 
     useEffect(() => {
-        if (!stompClient || !currentUser) return;
+        if (!stompClient || !stompClient.connected || !currentUser) return;
 
         const messageSubscription = stompClient.subscribe(
             `/user/${currentUser.id}/queue/messages`,
@@ -71,10 +71,14 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
         );
 
         return () => {
-            messageSubscription.unsubscribe();
-            typingSubscription.unsubscribe();
+            if (messageSubscription) {
+                messageSubscription.unsubscribe();
+            }
+            if (typingSubscription) {
+                typingSubscription.unsubscribe();
+            }
         };
-    }, [stompClient, currentUser, selectedUser]);
+    }, [stompClient, stompClient?.connected, currentUser, selectedUser]);
 
     const loadMessages = async () => {
         if (!selectedUser) return;

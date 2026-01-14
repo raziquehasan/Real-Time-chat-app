@@ -19,7 +19,7 @@ const UserList = ({ onSelectUser, selectedUserId, stompClient }) => {
 
     // Subscribe to real-time status updates
     useEffect(() => {
-        if (!stompClient) return;
+        if (!stompClient || !stompClient.connected) return;
 
         const subscription = stompClient.subscribe('/topic/user-status', (message) => {
             const statusUpdate = JSON.parse(message.body);
@@ -33,9 +33,11 @@ const UserList = ({ onSelectUser, selectedUserId, stompClient }) => {
         });
 
         return () => {
-            subscription.unsubscribe();
+            if (subscription) {
+                subscription.unsubscribe();
+            }
         };
-    }, [stompClient]);
+    }, [stompClient, stompClient?.connected]);
 
     const loadUsers = async () => {
         try {
