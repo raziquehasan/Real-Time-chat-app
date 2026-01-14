@@ -39,10 +39,16 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             `/user/${currentUser.id}/queue/messages`,
             (message) => {
                 const receivedMessage = JSON.parse(message.body);
-                if (
-                    receivedMessage.senderId === selectedUser?.id ||
-                    receivedMessage.receiverId === selectedUser?.id
-                ) {
+                console.log('📨 Received message:', receivedMessage);
+
+                // Show message if it's between current user and selected user
+                const isRelevantMessage = selectedUser && (
+                    (receivedMessage.senderId === currentUser.id && receivedMessage.receiverId === selectedUser.id) ||
+                    (receivedMessage.senderId === selectedUser.id && receivedMessage.receiverId === currentUser.id)
+                );
+
+                if (isRelevantMessage) {
+                    console.log('✅ Adding message to chat');
                     setMessages((prev) => {
                         const exists = prev.some((msg) => msg.id === receivedMessage.id);
                         if (exists) return prev;
@@ -52,6 +58,8 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                     if (receivedMessage.senderId === selectedUser?.id) {
                         markMessagesAsRead();
                     }
+                } else {
+                    console.log('⏭️ Message not relevant for current chat');
                 }
             }
         );
@@ -193,8 +201,11 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                 receiverId: selectedUser.id,
                 typing: true,
             };
-            if (stompClient && stompClient.send) {
-                stompClient.send('/app/typing', {}, JSON.stringify(typingNotification));
+            if (stompClient && stompClient.publish) {
+                stompClient.publish({
+                    destination: '/app/typing',
+                    body: JSON.stringify(typingNotification)
+                });
             }
         }
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -210,8 +221,11 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             receiverId: selectedUser.id,
             typing: false,
         };
-        if (stompClient && stompClient.send) {
-            stompClient.send('/app/typing', {}, JSON.stringify(typingNotification));
+        if (stompClient && stompClient.publish) {
+            stompClient.publish({
+                destination: '/app/typing',
+                body: JSON.stringify(typingNotification)
+            });
         }
     };
 
@@ -277,7 +291,9 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                                     Online
                                 </>
                             ) : (
-                                `Last seen ${selectedUser.lastSeen ? formatDistanceToNow(new Date(selectedUser.lastSeen), { addSuffix: true }) : 'Recently'}`
+                                selectedUser.lastSeen
+                                    ? `Last seen ${format(new Date(selectedUser.lastSeen), 'MMM dd, h:mm a')}`
+                                    : 'Last seen recently'
                             )}
                         </p>
                     </div>
