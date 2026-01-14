@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/private")
-@CrossOrigin(origins = "http://localhost:*")
 public class PrivateChatController {
 
         @Autowired
