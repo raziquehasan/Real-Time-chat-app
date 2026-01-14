@@ -3,10 +3,7 @@ import { baseURL } from '../config/AxiosHelper';
 
 // Create axios instance
 const api = axios.create({
-    baseURL: baseURL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    baseURL: baseURL
 });
 
 // Request interceptor to add JWT token
@@ -108,7 +105,11 @@ export const privateChatAPI = {
     },
 
     sendFile: async (formData) => {
-        const response = await api.post('/api/private/send-file', formData);
+        const response = await api.post('/api/private/send-file', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
         return response.data;
     },
 };
