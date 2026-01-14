@@ -77,8 +77,8 @@ const UserList = ({ onSelectUser, selectedUserId, stompClient }) => {
                     className="flex items-center gap-3 mb-4 p-2 rounded-xl hover:bg-gray-700 cursor-pointer transition-all border border-transparent hover:border-gray-600"
                 >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                        {currentUser?.avatar ? (
-                            <img src={currentUser.avatar} alt="Me" className="w-full h-full rounded-full object-cover" />
+                        {currentUser?.avatarUrl ? (
+                            <img src={currentUser.avatarUrl} alt="Me" className="w-full h-full rounded-full object-cover" />
                         ) : (
                             <FiUser size={20} />
                         )}
@@ -128,9 +128,9 @@ const UserList = ({ onSelectUser, selectedUserId, stompClient }) => {
                                 {/* Avatar */}
                                 <div className="relative flex-shrink-0">
                                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                                        {user.avatar ? (
+                                        {user.avatarUrl ? (
                                             <img
-                                                src={user.avatar}
+                                                src={user.avatarUrl}
                                                 alt={user.name}
                                                 className="w-full h-full rounded-full object-cover"
                                             />

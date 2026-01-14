@@ -76,6 +76,15 @@ export const usersAPI = {
         const response = await api.get('/api/users/search', { params: { q: query } });
         return response.data;
     },
+
+    uploadAvatar: async (formData) => {
+        const response = await api.post('/api/users/upload-avatar', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
 };
 
 // Private chat API calls
@@ -99,6 +108,15 @@ export const privateChatAPI = {
 
     getUnreadCount: async () => {
         const response = await api.get('/api/private/unread-count');
+        return response.data;
+    },
+
+    sendFile: async (formData) => {
+        const response = await api.post('/api/private/send-file', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
         return response.data;
     },
 };

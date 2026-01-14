@@ -22,6 +22,9 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private com.substring.chat.services.FileStorageService fileStorageService;
+
     /**
      * Get all users (excluding current user)
      * GET /api/users
@@ -45,7 +48,7 @@ public class UserController {
                             user.getCreatedAt(),
                             user.getLastSeen(),
                             user.isOnline(),
-                            user.getAvatar(),
+                            user.getAvatarUrl(),
                             user.getAbout(),
                             user.getPhone()))
                     .collect(Collectors.toList());
@@ -76,7 +79,7 @@ public class UserController {
                     user.getCreatedAt(),
                     user.getLastSeen(),
                     user.isOnline(),
-                    user.getAvatar(),
+                    user.getAvatarUrl(),
                     user.getAbout(),
                     user.getPhone());
 
@@ -114,7 +117,7 @@ public class UserController {
                             user.getCreatedAt(),
                             user.getLastSeen(),
                             user.isOnline(),
-                            user.getAvatar(),
+                            user.getAvatarUrl(),
                             user.getAbout(),
                             user.getPhone()))
                     .collect(Collectors.toList());
@@ -147,8 +150,8 @@ public class UserController {
                 user.setAbout(request.getAbout());
             if (request.getPhone() != null)
                 user.setPhone(request.getPhone());
-            if (request.getAvatar() != null)
-                user.setAvatar(request.getAvatar());
+            if (request.getAvatarUrl() != null)
+                user.setAvatarUrl(request.getAvatarUrl());
 
             User savedUser = userRepository.save(user);
 
@@ -159,7 +162,7 @@ public class UserController {
                     savedUser.getCreatedAt(),
                     savedUser.getLastSeen(),
                     savedUser.isOnline(),
-                    savedUser.getAvatar(),
+                    savedUser.getAvatarUrl(),
                     savedUser.getAbout(),
                     savedUser.getPhone());
 
@@ -168,6 +171,47 @@ public class UserController {
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
             error.put("message", "Failed to update profile: " + e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * Upload avatar image
+     * POST /api/users/upload-avatar
+     */
+    @PostMapping("/upload-avatar")
+    public ResponseEntity<?> uploadAvatar(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Upload to Cloudinary using FileStorageService
+            com.substring.chat.entities.FileAttachment attachment = fileStorageService.uploadFile(file, user.getId());
+
+            // Save avatar URL
+            user.setAvatarUrl(attachment.getFileUrl());
+            User savedUser = userRepository.save(user);
+
+            UserResponse response = new UserResponse(
+                    savedUser.getId(),
+                    savedUser.getName(),
+                    savedUser.getEmail(),
+                    savedUser.getCreatedAt(),
+                    savedUser.getLastSeen(),
+                    savedUser.isOnline(),
+                    savedUser.getAvatarUrl(),
+                    savedUser.getAbout(),
+                    savedUser.getPhone());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to upload avatar: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         }
     }

@@ -78,13 +78,23 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             }
         );
 
+        const readReceiptSubscription = stompClient.subscribe(
+            `/user/${currentUser.id}/queue/read-receipt`,
+            (message) => {
+                const messageIds = JSON.parse(message.body);
+                console.log('✅ Received read receipt for messages:', messageIds);
+                setMessages((prev) =>
+                    prev.map((msg) =>
+                        messageIds.includes(msg.id) ? { ...msg, isRead: true } : msg
+                    )
+                );
+            }
+        );
+
         return () => {
-            if (messageSubscription) {
-                messageSubscription.unsubscribe();
-            }
-            if (typingSubscription) {
-                typingSubscription.unsubscribe();
-            }
+            if (messageSubscription) messageSubscription.unsubscribe();
+            if (typingSubscription) typingSubscription.unsubscribe();
+            if (readReceiptSubscription) readReceiptSubscription.unsubscribe();
         };
     }, [stompClient, stompClient?.connected, currentUser, selectedUser]);
 
@@ -270,8 +280,8 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                            {selectedUser.avatar ? (
-                                <img src={selectedUser.avatar} alt={selectedUser.name} className="w-full h-full rounded-full object-cover" />
+                            {selectedUser.avatarUrl ? (
+                                <img src={selectedUser.avatarUrl} alt={selectedUser.name} className="w-full h-full rounded-full object-cover" />
                             ) : (
                                 <FiUser size={20} />
                             )}

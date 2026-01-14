@@ -19,7 +19,7 @@ public class UserResponse {
     private LocalDateTime createdAt;
     private LocalDateTime lastSeen;
     private boolean online;
-    private String avatar;
+    private String avatarUrl;
     private String about;
     private String phone;
 }

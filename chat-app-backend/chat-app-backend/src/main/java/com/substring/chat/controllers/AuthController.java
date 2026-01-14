@@ -156,7 +156,7 @@ public class AuthController {
                     user.getCreatedAt(),
                     user.getLastSeen(),
                     user.isOnline(),
-                    user.getAvatar(),
+                    user.getAvatarUrl(),
                     user.getAbout(),
                     user.getPhone());
 

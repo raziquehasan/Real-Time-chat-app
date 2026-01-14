@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { profileAPI, filesAPI } from '../services/api';
+import { profileAPI, usersAPI, filesAPI } from '../services/api';
 import { FiUser, FiCamera, FiArrowLeft, FiSave, FiInfo, FiPhone } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -11,7 +11,7 @@ const Profile = () => {
     const [name, setName] = useState(user?.name || '');
     const [about, setAbout] = useState(user?.about || 'I am using Chat App!');
     const [phone, setPhone] = useState(user?.phone || '');
-    const [avatar, setAvatar] = useState(user?.avatar || '');
+    const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null);
@@ -22,9 +22,15 @@ const Profile = () => {
 
         try {
             setUploading(true);
-            const data = await filesAPI.upload(file);
-            setAvatar(data.fileUrl);
-            toast.success('Avatar uploaded! Click Save to apply changes.');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const updatedUser = await usersAPI.uploadAvatar(formData);
+            setAvatarUrl(updatedUser.avatarUrl);
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+
+            toast.success('Profile photo updated successfully!');
         } catch (error) {
             console.error('Avatar upload failed:', error);
             toast.error('Failed to upload avatar');
@@ -41,7 +47,7 @@ const Profile = () => {
                 name,
                 about,
                 phone,
-                avatar
+                avatarUrl
             });
 
             // Update auth context
@@ -77,8 +83,8 @@ const Profile = () => {
                     <div className="flex flex-col items-center">
                         <div className="relative group">
                             <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-700 border-4 border-gray-600 flex items-center justify-center">
-                                {avatar ? (
-                                    <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                                {avatarUrl ? (
+                                    <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
                                     <FiUser size={64} className="text-gray-400" />
                                 )}

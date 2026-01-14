@@ -35,7 +35,7 @@ public class User {
 
     private boolean online;
 
-    private String avatar; // Optional: URL or base64
+    private String avatarUrl; // Optional: URL or base64
 
     private String about; // Bio/Status
 

@@ -193,9 +193,9 @@ public class PrivateChatController {
 
         /**
          * Mark messages as read
-         * POST /api/private/{senderId}/read
+         * PUT /api/private/mark-read/{senderId}
          */
-        @PostMapping("/{senderId}/read")
+        @PutMapping("/mark-read/{senderId}")
         public ResponseEntity<?> markMessagesAsRead(@PathVariable String senderId) {
                 try {
                         // Get current authenticated user
@@ -220,17 +220,12 @@ public class PrivateChatController {
 
                         // Notify sender that messages were read
                         if (!unreadMessages.isEmpty()) {
-                                Map<String, Object> readReceipt = new HashMap<>();
-                                readReceipt.put("readBy", currentUser.getId());
-                                readReceipt.put("readAt", now);
-                                readReceipt.put("messageIds", unreadMessages.stream()
-                                                .map(PrivateMessage::getId)
-                                                .collect(Collectors.toList()));
-
                                 messagingTemplate.convertAndSendToUser(
                                                 senderId,
-                                                "/queue/read-receipts",
-                                                readReceipt);
+                                                "/queue/read-receipt",
+                                                unreadMessages.stream()
+                                                                .map(PrivateMessage::getId)
+                                                                .collect(Collectors.toList()));
                         }
 
                         Map<String, Object> response = new HashMap<>();

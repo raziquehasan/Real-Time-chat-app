@@ -122,7 +122,7 @@ const Register = () => {
                 id: response.userId,
                 name: response.name,
                 email: response.email,
-                avatar: avatarPreview, // Use preview for now
+                avatarUrl: avatarPreview, // Use preview for now
             });
 
             toast.success('Account created successfully! 🎉', {
