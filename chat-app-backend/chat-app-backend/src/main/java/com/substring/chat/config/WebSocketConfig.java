@@ -17,7 +17,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Enable simple broker for topics and user-specific queues
         // 10 second heartbeat for production stability
         config.enableSimpleBroker("/topic", "/queue")
-                .setHeartbeatValue(new long[]{10000, 10000})
+                .setHeartbeatValue(new long[] { 10000, 10000 })
                 .setTaskScheduler(heartBeatScheduler());
 
         // Application destination prefix
@@ -29,8 +29,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/chat")   // WebSocket connection endpoint
-                .setAllowedOriginPatterns("*") // Secure via JWT later
+        registry.addEndpoint("/chat") // WebSocket connection endpoint
+                .setAllowedOriginPatterns(
+                        "http://localhost:*",
+                        "http://127.0.0.1:*",
+                        "https://chatapp-eta-seven.vercel.app")
                 .withSockJS();
     }
 

@@ -160,6 +160,7 @@ const Login = () => {
                         placeholder="Email Address"
                         icon={FiMail}
                         error={errors.email}
+                        autoComplete="email"
                         required
                     />
 
@@ -172,6 +173,7 @@ const Login = () => {
                         placeholder="Password"
                         icon={FiLock}
                         error={errors.password}
+                        autoComplete="current-password"
                         required
                     />
 

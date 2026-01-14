@@ -221,6 +221,7 @@ const Register = () => {
                         placeholder="Full Name"
                         icon={FiUser}
                         error={errors.name}
+                        autoComplete="name"
                         required
                     />
 
@@ -233,6 +234,7 @@ const Register = () => {
                         placeholder="Email Address"
                         icon={FiMail}
                         error={errors.email}
+                        autoComplete="email"
                         required
                     />
 
@@ -246,6 +248,7 @@ const Register = () => {
                             placeholder="Password"
                             icon={FiLock}
                             error={errors.password}
+                            autoComplete="new-password"
                             required
                         />
                         <PasswordStrength password={formData.password} />
@@ -260,6 +263,7 @@ const Register = () => {
                         placeholder="Confirm Password"
                         icon={FiLock}
                         error={errors.confirmPassword}
+                        autoComplete="new-password"
                         required
                     />
 
