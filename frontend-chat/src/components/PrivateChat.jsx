@@ -117,8 +117,23 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                 content: newMessage.trim(),
             };
 
-            if (stompClient && stompClient.send) {
+            console.log('🔍 Attempting to send message:', messagePayload);
+            console.log('🔍 stompClient:', stompClient);
+            console.log('🔍 stompClient.send exists?', !!stompClient.send);
+            console.log('🔍 stompClient.publish exists?', !!stompClient.publish);
+
+            // Try using publish method instead of send
+            if (stompClient && stompClient.publish) {
+                console.log('✅ Using stompClient.publish');
+                stompClient.publish({
+                    destination: '/app/private',
+                    body: JSON.stringify(messagePayload)
+                });
+            } else if (stompClient && stompClient.send) {
+                console.log('✅ Using stompClient.send');
                 stompClient.send('/app/private', {}, JSON.stringify(messagePayload));
+            } else {
+                console.error('❌ No send or publish method available!');
             }
 
             setNewMessage('');
