@@ -105,11 +105,7 @@ export const privateChatAPI = {
     },
 
     sendFile: async (formData) => {
-        const response = await api.post('/api/private/send-file', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        const response = await api.post('/api/private/send-file', formData);
         return response.data;
     },
 };
