@@ -33,7 +33,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns(
                         "http://localhost:*",
                         "http://127.0.0.1:*",
-                        "https://chatapp-eta-seven.vercel.app")
+                        "https://chatapp-eta-seven.vercel.app",
+                        "https://chatapp-raziquehasans-projects.vercel.app")
                 .withSockJS();
     }
 
