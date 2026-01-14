@@ -105,7 +105,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
 
     const sendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !stompClient || !stompClient.connected || typeof stompClient.send !== 'function' || !selectedUser) return;
+        if (!newMessage.trim() || !stompClient || !stompClient.connected || !selectedUser) return;
 
         try {
             setSending(true);
@@ -116,7 +116,11 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                 receiverName: selectedUser.name,
                 content: newMessage.trim(),
             };
-            stompClient.send('/app/private', {}, JSON.stringify(messagePayload));
+
+            if (stompClient && stompClient.send) {
+                stompClient.send('/app/private', {}, JSON.stringify(messagePayload));
+            }
+
             setNewMessage('');
             handleStopTyping();
         } catch (error) {
@@ -163,7 +167,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
     };
 
     const handleTyping = () => {
-        if (!stompClient || !stompClient.connected || typeof stompClient.send !== 'function' || !selectedUser) return;
+        if (!stompClient || !stompClient.connected || !selectedUser) return;
         const now = Date.now();
         if (!isTyping || (now - (handleTyping.lastSent || 0) > 2000)) {
             setIsTyping(true);
@@ -174,14 +178,16 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                 receiverId: selectedUser.id,
                 typing: true,
             };
-            stompClient.send('/app/typing', {}, JSON.stringify(typingNotification));
+            if (stompClient && stompClient.send) {
+                stompClient.send('/app/typing', {}, JSON.stringify(typingNotification));
+            }
         }
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => handleStopTyping(), 3000);
     };
 
     const handleStopTyping = () => {
-        if (!stompClient || !stompClient.connected || typeof stompClient.send !== 'function' || !selectedUser || !isTyping) return;
+        if (!stompClient || !stompClient.connected || !selectedUser || !isTyping) return;
         setIsTyping(false);
         const typingNotification = {
             userId: currentUser.id,
@@ -189,7 +195,9 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             receiverId: selectedUser.id,
             typing: false,
         };
-        stompClient.send('/app/typing', {}, JSON.stringify(typingNotification));
+        if (stompClient && stompClient.send) {
+            stompClient.send('/app/typing', {}, JSON.stringify(typingNotification));
+        }
     };
 
     const scrollToBottom = () => {
