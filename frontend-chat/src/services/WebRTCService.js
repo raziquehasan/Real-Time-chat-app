@@ -20,9 +20,10 @@ class WebRTCService {
         try {
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
+                    echoCancellation: { ideal: true },
+                    noiseSuppression: { ideal: true },
+                    autoGainControl: { ideal: true },
+                    channelCount: 1 // Mono is better for echo cancellation
                 },
                 video: video
             });

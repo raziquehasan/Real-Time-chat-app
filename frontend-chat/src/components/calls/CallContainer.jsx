@@ -289,8 +289,12 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 webRTCServiceRef.current = new WebRTCService(
                     stompClient, currentUser.id,
                     (pId, s) => {
-                        console.log("🎮 Remote stream received for:", pId);
-                        setRemoteStreams(prev => ({ ...prev, [pId]: s }));
+                        // Avoid redundant state updates if stream hasn't changed
+                        setRemoteStreams(prev => {
+                            if (prev[pId]?.id === s.id) return prev;
+                            console.log("🎮 New Remote stream received for:", pId);
+                            return { ...prev, [pId]: s };
+                        });
                     }
                 );
             }
