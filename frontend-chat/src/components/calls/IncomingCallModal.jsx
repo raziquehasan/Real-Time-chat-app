@@ -2,17 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { FiPhone, FiPhoneOff, FiX } from 'react-icons/fi';
 
 const IncomingCallModal = ({ callSession, initiator, onAccept, onDecline }) => {
-    const [ringtone] = useState(new Audio('/assets/sounds/ringtone.mp3'));
-
     useEffect(() => {
-        ringtone.loop = true;
-        ringtone.play().catch(err => console.error("Ringtone playback blocked", err));
-
-        return () => {
-            ringtone.pause();
-            ringtone.currentTime = 0;
-        };
-    }, [ringtone]);
+        // Sound is managed globally by CallContainer
+    }, []);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">

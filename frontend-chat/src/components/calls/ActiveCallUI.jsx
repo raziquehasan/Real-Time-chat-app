@@ -6,7 +6,7 @@ const RemoteVideo = ({ peerId, stream }) => {
     const videoRef = useRef(null);
 
     useEffect(() => {
-        if (videoRef.current && stream) {
+        if (videoRef.current && stream && videoRef.current.srcObject !== stream) {
             console.log(`Attaching remote stream for ${peerId}`);
             videoRef.current.srcObject = stream;
 
@@ -14,7 +14,7 @@ const RemoteVideo = ({ peerId, stream }) => {
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    console.warn("Autoplay was prevented, waiting for user interaction:", error);
+                    console.warn("Autoplay was prevented:", error);
                 });
             }
         }

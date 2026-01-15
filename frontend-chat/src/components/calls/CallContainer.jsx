@@ -16,25 +16,21 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
 
     const webRTCServiceRef = useRef(null);
     const signalingHandlerRef = useRef(null);
+    const processedSignalsRef = useRef(new Set());
     const outgoingRingRef = useRef(null);
     const incomingRingRef = useRef(null);
 
     // Sound initialization
     useEffect(() => {
-        outgoingRingRef.current = new Audio('https://www.soundjay.com/phone/phone-calling-1.mp3');
+        // High-quality ringtone links
+        outgoingRingRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
         outgoingRingRef.current.loop = true;
-        incomingRingRef.current = new Audio('https://www.soundjay.com/phone/telephone-ring-03a.mp3');
+        incomingRingRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/1358/1358-preview.mp3');
         incomingRingRef.current.loop = true;
 
         return () => {
-            if (outgoingRingRef.current) {
-                outgoingRingRef.current.pause();
-                outgoingRingRef.current = null;
-            }
-            if (incomingRingRef.current) {
-                incomingRingRef.current.pause();
-                incomingRingRef.current = null;
-            }
+            outgoingRingRef.current?.pause();
+            incomingRingRef.current?.pause();
         };
     }, []);
 
@@ -112,11 +108,15 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
         setCallSession(null);
         setCallStatus('IDLE');
         setInitiator(null);
+        processedSignalsRef.current.clear();
     }, []);
 
     const startWebRTCFlow = useCallback(async (targetId) => {
+        if (processedSignalsRef.current.has(`flow-${targetId}`)) return;
+        processedSignalsRef.current.add(`flow-${targetId}`);
+
         try {
-            console.log("Initiating WebRTC flow for:", targetId);
+            console.log("🚀 Initiating WebRTC flow for:", targetId);
             const isVideo = callSession.callType === 'VIDEO';
             const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
             setLocalStream(stream);
@@ -130,6 +130,18 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
     }, [callSession, cleanup]);
 
     const handleSignalingMessage = useCallback(async (signal) => {
+        // Signal deduplication
+        const signalId = `${signal.type}-${signal.sessionId}-${signal.senderId || signal.userId || 'system'}`;
+        if (processedSignalsRef.current.has(signalId)) {
+            console.log("♻️ Skipping redundant signal:", signal.type);
+            return;
+        }
+
+        // Don't deduplicate candidates - they are multiple by nature
+        if (signal.type !== 'call:candidate' && signal.type !== 'call:ring') {
+            processedSignalsRef.current.add(signalId);
+        }
+
         switch (signal.type) {
             case 'call:ring':
                 console.log("🔔 Call Ringing Signal Received:", signal);
