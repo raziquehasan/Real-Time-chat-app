@@ -3,7 +3,7 @@ import { FiUsers, FiPlus, FiSearch } from 'react-icons/fi';
 import { groupAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
-const GroupList = ({ onSelectGroup, stompClient, currentUser }) => {
+const GroupList = ({ onSelectGroup, selectedGroupId, stompClient, currentUser }) => {
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
