@@ -49,37 +49,8 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
         }
     }));
 
-    const signalingHandlerRef = useRef(null);
-
-    // Update handler ref whenever state changes
-    useEffect(() => {
-        signalingHandlerRef.current = handleSignalingMessage;
-    }, [handleSignalingMessage]);
-
-    // Initialize WebRTC Service
-    useEffect(() => {
-        if (stompClient && connected) {
-            webRTCServiceRef.current = new WebRTCService(
-                stompClient,
-                (peerId, stream) => {
-                    setRemoteStreams(prev => ({ ...prev, [peerId]: stream }));
-                }
-            );
-
-            const subscription = stompClient.subscribe('/user/queue/calls', (message) => {
-                if (signalingHandlerRef.current) {
-                    signalingHandlerRef.current(JSON.parse(message.body));
-                }
-            });
-
-            return () => {
-                subscription.unsubscribe();
-                cleanup();
-            };
-        }
-    }, [stompClient, connected]); // Dependencies reduced to avoid resubscription
-
-    const cleanup = () => {
+    // 2. Callbacks
+    const cleanup = useCallback(() => {
         if (webRTCServiceRef.current) {
             webRTCServiceRef.current.closeAllConnections();
         }
@@ -88,7 +59,22 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
         setCallSession(null);
         setCallStatus('IDLE');
         setInitiator(null);
-    };
+    }, []);
+
+    const startWebRTCFlow = useCallback(async (targetId) => {
+        try {
+            console.log("Initiating WebRTC flow for:", targetId);
+            const isVideo = callSession.callType === 'VIDEO';
+            const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
+            setLocalStream(stream);
+            await webRTCServiceRef.current.createOffer(targetId, callSession.id);
+            setCallStatus('ACTIVE');
+        } catch (error) {
+            console.error("WebRTC Flow Error:", error);
+            toast.error('Could not start media stream');
+            cleanup();
+        }
+    }, [callSession, cleanup]);
 
     const handleSignalingMessage = useCallback(async (signal) => {
         switch (signal.type) {
@@ -154,24 +140,9 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             default:
                 break;
         }
-    }, [callStatus]);
+    }, [callStatus, stompClient, startWebRTCFlow, cleanup]);
 
-    const startWebRTCFlow = async (targetId) => {
-        try {
-            console.log("Initiating WebRTC flow for:", targetId);
-            const isVideo = callSession.callType === 'VIDEO';
-            const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
-            setLocalStream(stream);
-            await webRTCServiceRef.current.createOffer(targetId, callSession.id);
-            setCallStatus('ACTIVE');
-        } catch (error) {
-            console.error("WebRTC Flow Error:", error);
-            toast.error('Could not start media stream');
-            cleanup();
-        }
-    };
-
-    const handleAccept = async () => {
+    const handleAccept = useCallback(async () => {
         try {
             console.log("Call accepted, preparing media...");
             const isVideo = callSession.callType === 'VIDEO';
@@ -185,39 +156,39 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             toast.error('Failed to accept call');
             cleanup();
         }
-    };
+    }, [callSession, cleanup]);
 
-    const handleDecline = async () => {
+    const handleDecline = useCallback(async () => {
         try {
             await callAPI.declineCall(callSession.id);
             cleanup();
         } catch (error) {
             cleanup();
         }
-    };
+    }, [callSession, cleanup]);
 
-    const handleEndCall = async () => {
+    const handleEndCall = useCallback(async () => {
         try {
-            await callAPI.endCall(callSession.id);
+            await callAPI.endCall(callSession?.id);
             cleanup();
         } catch (error) {
             cleanup();
         }
-    };
+    }, [callSession, cleanup]);
 
-    const toggleMute = () => {
+    const toggleMute = useCallback(() => {
         if (localStream) {
             localStream.getAudioTracks().forEach(track => (track.enabled = !track.enabled));
-            setIsMuted(!isMuted);
+            setIsMuted(prev => !prev);
         }
-    };
+    }, [localStream]);
 
-    const toggleVideo = () => {
+    const toggleVideo = useCallback(() => {
         if (localStream) {
             localStream.getVideoTracks().forEach(track => (track.enabled = !track.enabled));
-            setIsVideoEnabled(!isVideoEnabled);
+            setIsVideoEnabled(prev => !prev);
         }
-    };
+    }, [localStream]);
 
     return (
         <>
