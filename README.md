@@ -37,6 +37,16 @@
 - Reactions & comments
 - Channel discovery
 
+### 📞 **Voice & Video Calling**
+- One-on-one and Group voice calls
+- One-on-one and Group video calls
+- Low-latency WebRTC peer-to-peer streaming
+- Real-time signaling via WebSocket (SDP/ICE)
+- Incoming call notifications with ringtones
+- Call history and session logs
+- Camera and microphone toggle controls
+- Full-screen video mode
+
 ### 🔔 **Smart Notifications**
 - Real-time push notifications
 - Do Not Disturb (DND) mode with time windows
@@ -186,6 +196,7 @@ chat-app/
 - `channel_messages` - Channel posts
 - `notifications` - User notifications
 - `notification_settings` - Notification preferences
+- `call_sessions` - Call history and session metadata
 
 ---
 
@@ -194,6 +205,13 @@ chat-app/
 ### **Authentication**
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
+
+### 📞 **Call Management**
+- `POST /api/calls/start` - Initiate a call
+- `POST /api/calls/{id}/accept` - Accept an incoming call
+- `POST /api/calls/{id}/decline` - Decline an incoming call
+- `POST /api/calls/{id}/end` - End an active call
+- `GET /api/calls/history` - View call log history
 
 ### **Private Chat**
 - `GET /api/private/{userId}/messages` - Get messages
@@ -330,8 +348,8 @@ This project is licensed under the MIT License.
 
 ## 📈 Roadmap
 
-- [ ] Voice messages
-- [ ] Video calls
+- [x] Voice messages (Voice Notes)
+- [x] Video calls
 - [ ] End-to-end encryption
 - [ ] Message translation
 - [ ] Stickers & GIFs

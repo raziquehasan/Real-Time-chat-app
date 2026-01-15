@@ -7,7 +7,8 @@ import UserList from '../components/UserList';
 import PrivateChat from '../components/PrivateChat';
 import { FiLogOut, FiMessageCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { authAPI } from '../services/api';
+import { authAPI, callAPI } from '../services/api';
+import CallContainer from '../components/calls/CallContainer';
 
 const ChatApp = () => {
     const { user, logout } = useAuth();
@@ -101,8 +102,23 @@ const ChatApp = () => {
         }
     };
 
-    const handleSelectUser = (user) => {
-        setSelectedUser(user);
+    const handleSelectUser = (u) => {
+        setSelectedUser(u);
+    };
+
+    // Function to initiate a call (to be passed to components)
+    const handleInitiateCall = async (targetId, type, isGroup = false, groupId = null) => {
+        try {
+            await callAPI.startCall({
+                participantIds: [targetId],
+                callType: type,
+                groupCall: isGroup,
+                groupId: groupId
+            });
+            toast.success(`Calling...`);
+        } catch (error) {
+            toast.error('Could not initiate call');
+        }
     };
 
     return (
@@ -114,7 +130,7 @@ const ChatApp = () => {
                         <FiMessageCircle className="text-white" size={24} />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold text-white">Chat App</h1>
+                        <h1 className="text-xl font-bold text-white">ZapChat</h1>
                         <p className="text-xs text-gray-400">
                             {connected ? (
                                 <span className="flex items-center gap-1">
@@ -163,9 +179,17 @@ const ChatApp = () => {
                     <PrivateChat
                         selectedUser={selectedUser}
                         stompClient={stompClient}
+                        onInitiateCall={handleInitiateCall}
                     />
                 </div>
             </div>
+
+            {/* Call Management */}
+            <CallContainer
+                stompClient={stompClient}
+                currentUser={user}
+                connected={connected}
+            />
         </div>
     );
 };

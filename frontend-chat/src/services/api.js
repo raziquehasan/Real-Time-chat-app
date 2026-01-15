@@ -248,4 +248,28 @@ export const profileAPI = {
     },
 };
 
+// Call API calls
+export const callAPI = {
+    startCall: async (data) => {
+        const response = await api.post('/api/calls/start', data);
+        return response.data;
+    },
+    acceptCall: async (sessionId) => {
+        const response = await api.post(`/api/calls/${sessionId}/accept`);
+        return response.data;
+    },
+    declineCall: async (sessionId) => {
+        const response = await api.post(`/api/calls/${sessionId}/decline`);
+        return response.data;
+    },
+    endCall: async (sessionId) => {
+        const response = await api.post(`/api/calls/${sessionId}/end`);
+        return response.data;
+    },
+    getHistory: async () => {
+        const response = await api.get('/api/calls/history');
+        return response.data;
+    }
+};
+
 export default api;

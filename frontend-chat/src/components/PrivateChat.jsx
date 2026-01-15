@@ -9,7 +9,9 @@ import DeleteConfirmDialog from './DeleteConfirmDialog';
 import MessageSearch from './MessageSearch';
 import ChatSkeleton from './ChatSkeleton';
 
-const PrivateChat = ({ selectedUser, stompClient }) => {
+import CallButton from './calls/CallButton';
+
+const PrivateChat = ({ selectedUser, stompClient, onInitiateCall }) => {
     const { user: currentUser } = useAuth();
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -689,6 +691,16 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <CallButton
+                        type="VOICE"
+                        onCall={(type) => onInitiateCall(selectedUser.id, type)}
+                        disabled={!selectedUser.online}
+                    />
+                    <CallButton
+                        type="VIDEO"
+                        onCall={(type) => onInitiateCall(selectedUser.id, type)}
+                        disabled={!selectedUser.online}
+                    />
                     <button
                         onClick={() => setSearchOpen(!searchOpen)}
                         className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400 hover:text-white"
