@@ -132,6 +132,26 @@ public class GroupController {
     }
 
     /**
+     * POST /api/groups/{id}/exit - Leave the group
+     */
+    @PostMapping("/{id}/exit")
+    public ResponseEntity<?> exitGroup(@PathVariable String id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Validate membership
+        if (!groupService.validateMembership(id, user.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Not a member of this group"));
+        }
+
+        groupService.removeMember(id, user.getId());
+
+        return ResponseEntity.ok(Map.of("message", "Exited group successfully"));
+    }
+
+    /**
      * POST /api/groups/join/{inviteLink} - Join group via invite link
      */
     @PostMapping("/join/{inviteLink}")

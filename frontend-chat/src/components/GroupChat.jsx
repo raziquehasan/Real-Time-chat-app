@@ -125,10 +125,35 @@ const GroupChat = ({ group, stompClient, currentUser, onShowInfo, onShowMembers 
         }
     };
 
+    const handleClearChat = async () => {
+        if (!window.confirm('Are you sure you want to clear all messages in this group?')) return;
+        try {
+            await groupAPI.clearChat(group.id);
+            setMessages([]);
+            toast.success('Chat cleared');
+            setShowMenu(false);
+        } catch (error) {
+            console.error('Failed to clear chat:', error);
+            toast.error('Failed to clear chat');
+        }
+    };
+
+    const handleExitGroup = async () => {
+        if (!window.confirm('Are you sure you want to exit this group?')) return;
+        try {
+            await groupAPI.exitGroup(group.id);
+            toast.success('Exited group');
+            window.location.reload(); // Simple way to refresh UI state
+        } catch (error) {
+            console.error('Failed to exit group:', error);
+            toast.error('Failed to exit group');
+        }
+    };
+
     return (
         <div className="h-full flex flex-col bg-[#0b141a]">
             {/* Header */}
-            <div className="bg-[#202c33] p-4 flex items-center justify-between border-b border-gray-700">
+            <div className="bg-[#202c33] p-4 flex items-center justify-between border-b border-gray-700 relative z-10">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
                         {group.avatarUrl ? (
@@ -157,11 +182,61 @@ const GroupChat = ({ group, stompClient, currentUser, onShowInfo, onShowMembers 
                     >
                         <FiInfo size={20} />
                     </button>
-                    <button className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400 hover:text-white">
-                        <FiMoreVertical size={20} />
-                    </button>
+
+                    {/* Three-dot Menu */}
+                    <div className="relative" ref={menuRef}>
+                        <button
+                            onClick={() => setShowMenu(!showMenu)}
+                            className={`p-2 hover:bg-gray-700 rounded-full transition-colors ${showMenu ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            <FiMoreVertical size={20} />
+                        </button>
+
+                        {showMenu && (
+                            <div className="absolute right-0 mt-2 w-48 bg-[#233138] rounded-lg shadow-2xl border border-gray-700 overflow-hidden z-50 py-1 anim-fade-in-down">
+                                <button
+                                    onClick={() => {
+                                        setShowAddMember(true);
+                                        setShowMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 flex items-center gap-3 text-gray-200 hover:bg-[#182229] transition-colors text-sm"
+                                >
+                                    <FiUserPlus className="text-blue-400" />
+                                    Add Member
+                                </button>
+                                <button
+                                    onClick={handleClearChat}
+                                    className="w-full px-4 py-3 flex items-center gap-3 text-gray-200 hover:bg-[#182229] transition-colors text-sm"
+                                >
+                                    <FiTrash2 className="text-orange-400" />
+                                    Clear Chat
+                                </button>
+                                <div className="border-t border-gray-700 my-1"></div>
+                                <button
+                                    onClick={handleExitGroup}
+                                    className="w-full px-4 py-3 flex items-center gap-3 text-red-400 hover:bg-[#182229] transition-colors text-sm"
+                                >
+                                    <FiLogOut />
+                                    Exit Group
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+
+            {/* Add Member Modal */}
+            {showAddMember && (
+                <AddMemberModal
+                    groupId={group.id}
+                    existingMembers={groupMembers}
+                    onClose={() => setShowAddMember(false)}
+                    onMemberAdded={(user) => {
+                        setGroupMembers(prev => [...prev, { userId: user.id, userName: user.name }]);
+                        // Optionally reload group details to update count
+                    }}
+                />
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -183,8 +258,8 @@ const GroupChat = ({ group, stompClient, currentUser, onShowInfo, onShowMembers 
                         >
                             <div
                                 className={`max-w-[70%] rounded-lg p-3 ${message.senderId === currentUser?.id
-                                        ? 'bg-[#005c4b] text-white'
-                                        : 'bg-[#202c33] text-white'
+                                    ? 'bg-[#005c4b] text-white'
+                                    : 'bg-[#202c33] text-white'
                                     }`}
                             >
                                 {message.senderId !== currentUser?.id && (

@@ -207,6 +207,14 @@ export const groupAPI = {
     togglePin: async (groupId, messageId) => {
         const response = await api.put(`/api/groups/${groupId}/messages/pin/${messageId}`);
         return response.data;
+    },
+    clearChat: async (groupId) => {
+        const response = await api.delete(`/api/groups/${groupId}/messages/clear`);
+        return response.data;
+    },
+    exitGroup: async (groupId) => {
+        const response = await api.post(`/api/groups/${groupId}/exit`);
+        return response.data;
     }
 };
 

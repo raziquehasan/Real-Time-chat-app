@@ -36,6 +36,11 @@ public interface GroupMessageRepository extends MongoRepository<GroupMessage, St
     List<GroupMessage> findMessagesMentioningUser(String groupId, String userId);
 
     /**
+     * Delete all messages for a group
+     */
+    void deleteByGroupId(String groupId);
+
+    /**
      * Count unread messages for user
      */
     @Query(value = "{ 'groupId': ?0, 'timestamp': { $gt: ?1 } }", count = true)
