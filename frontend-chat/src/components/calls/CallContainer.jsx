@@ -15,6 +15,7 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
     const [isVideoEnabled, setIsVideoEnabled] = useState(true);
 
     const webRTCServiceRef = useRef(null);
+    const signalingHandlerRef = useRef(null);
 
     useImperativeHandle(ref, () => ({
         initiateCall: async (targetId, type, isGroup = false, groupId = null) => {
