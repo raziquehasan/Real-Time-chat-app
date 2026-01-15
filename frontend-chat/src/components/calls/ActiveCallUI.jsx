@@ -2,6 +2,34 @@ import React, { useState, useEffect, useRef } from 'react';
 import CallControls from './CallControls';
 import { FiMaximize, FiMinimize, FiMoreHorizontal } from 'react-icons/fi';
 
+const RemoteVideo = ({ peerId, stream }) => {
+    const videoRef = useRef(null);
+
+    useEffect(() => {
+        if (videoRef.current && stream) {
+            console.log(`Attaching remote stream for ${peerId}`);
+            videoRef.current.srcObject = stream;
+
+            // Explicitly play to handle autoplay restrictions
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn("Autoplay was prevented, waiting for user interaction:", error);
+                });
+            }
+        }
+    }, [stream, peerId]);
+
+    return (
+        <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full h-full object-cover"
+        />
+    );
+};
+
 const ActiveCallUI = ({
     localStream,
     remoteStreams,
@@ -76,17 +104,7 @@ const ActiveCallUI = ({
                 {/* Remote Video(s) */}
                 {Object.entries(remoteStreams).map(([peerId, stream]) => (
                     <div key={peerId} className="relative w-full h-full bg-gray-900 overflow-hidden flex items-center justify-center">
-                        <video
-                            autoPlay
-                            playsInline
-                            ref={el => {
-                                if (el) {
-                                    el.srcObject = stream;
-                                    console.log("Remote stream attached for:", peerId);
-                                }
-                            }}
-                            className="w-full h-full object-cover"
-                        />
+                        <RemoteVideo peerId={peerId} stream={stream} />
                         <div className="absolute bottom-4 left-4 text-white text-xs bg-black/40 px-2 py-1 rounded">
                             Connected
                         </div>

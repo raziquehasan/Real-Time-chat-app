@@ -16,6 +16,44 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
 
     const webRTCServiceRef = useRef(null);
     const signalingHandlerRef = useRef(null);
+    const outgoingRingRef = useRef(null);
+    const incomingRingRef = useRef(null);
+
+    // Sound initialization
+    useEffect(() => {
+        outgoingRingRef.current = new Audio('https://www.soundjay.com/phone/phone-calling-1.mp3');
+        outgoingRingRef.current.loop = true;
+        incomingRingRef.current = new Audio('https://www.soundjay.com/phone/telephone-ring-03a.mp3');
+        incomingRingRef.current.loop = true;
+
+        return () => {
+            if (outgoingRingRef.current) {
+                outgoingRingRef.current.pause();
+                outgoingRingRef.current = null;
+            }
+            if (incomingRingRef.current) {
+                incomingRingRef.current.pause();
+                incomingRingRef.current = null;
+            }
+        };
+    }, []);
+
+    // Sound logic based on status
+    useEffect(() => {
+        if (callStatus === 'OUTGOING') {
+            outgoingRingRef.current?.play().catch(e => console.error("Sound play blocked:", e));
+        } else {
+            outgoingRingRef.current?.pause();
+            if (outgoingRingRef.current) outgoingRingRef.current.currentTime = 0;
+        }
+
+        if (callStatus === 'RINGING') {
+            incomingRingRef.current?.play().catch(e => console.error("Sound play blocked:", e));
+        } else {
+            incomingRingRef.current?.pause();
+            if (incomingRingRef.current) incomingRingRef.current.currentTime = 0;
+        }
+    }, [callStatus]);
 
     useImperativeHandle(ref, () => ({
         initiateCall: async (targetId, type, isGroup = false, groupId = null) => {

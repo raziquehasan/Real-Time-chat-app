@@ -19,10 +19,12 @@ class WebRTCService {
 
         try {
             this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
+                audio: true, // Always request audio
                 video: video
             });
             console.log("Local stream acquired:", this.localStream);
+            console.log("Audio tracks:", this.localStream.getAudioTracks().length);
+            console.log("Video tracks:", this.localStream.getVideoTracks().length);
             return this.localStream;
         } catch (error) {
             console.error("Error accessing media devices:", error);
