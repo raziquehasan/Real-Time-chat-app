@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import ForwardModal from './ForwardModal';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import MessageSearch from './MessageSearch';
+import ChatSkeleton from './ChatSkeleton';
 
 const PrivateChat = ({ selectedUser, stompClient }) => {
     const { user: currentUser } = useAuth();
@@ -22,6 +23,11 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
     const [replyingTo, setReplyingTo] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
+
+    // Lazy loading state
+    const [page, setPage] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     // New states for premium features
     const [contextMenu, setContextMenu] = useState(null);
@@ -157,18 +163,38 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
         };
     }, [stompClient, stompClient?.connected, currentUser, selectedUser]);
 
-    const loadMessages = async () => {
+    const loadMessages = async (pageNum = 0, append = false) => {
         if (!selectedUser) return;
         try {
-            setLoading(true);
-            const data = await privateChatAPI.getMessages(selectedUser.id);
-            setMessages(data);
+            if (!append) setLoading(true);
+            else setLoadingMore(true);
+
+            const data = await privateChatAPI.getMessages(selectedUser.id, pageNum, 50);
+
+            if (append) {
+                setMessages(prev => [...data, ...prev]);
+            } else {
+                setMessages(data);
+                setPage(0);
+            }
+
+            // Check if there are more messages
+            setHasMore(data.length === 50);
         } catch (error) {
             console.error('Failed to load messages:', error);
             toast.error('Failed to load messages');
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
+    };
+
+    // Load more messages (lazy loading)
+    const loadMoreMessages = async () => {
+        if (!hasMore || loadingMore) return;
+        const nextPage = page + 1;
+        setPage(nextPage);
+        await loadMessages(nextPage, true);
     };
 
     const markMessagesAsRead = async () => {
@@ -429,12 +455,45 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
         return format(date, 'MMMM dd, yyyy');
     };
 
-    // Context menu handlers
+    // Context menu handlers with viewport boundary detection
     const handleContextMenu = (e, message) => {
         e.preventDefault();
+
+        // Menu dimensions (approximate)
+        const menuWidth = 180;
+        const menuHeight = 130; // 3 items × ~40px + padding
+
+        // Viewport dimensions
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Click position
+        let x = e.clientX;
+        let y = e.clientY;
+
+        // Check right boundary - if menu overflows, align to left of cursor
+        if (x + menuWidth > viewportWidth) {
+            x = viewportWidth - menuWidth - 10; // 10px margin
+        }
+
+        // Check bottom boundary - if menu overflows, render upward
+        if (y + menuHeight > viewportHeight) {
+            y = y - menuHeight; // Render above cursor
+        }
+
+        // Ensure menu doesn't go off top
+        if (y < 10) {
+            y = 10;
+        }
+
+        // Ensure menu doesn't go off left
+        if (x < 10) {
+            x = 10;
+        }
+
         setContextMenu({
-            x: e.clientX,
-            y: e.clientY,
+            x,
+            y,
             message
         });
     };
@@ -659,16 +718,53 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                 style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundOpacity: 0.1 }}
             >
                 {loading ? (
-                    <div className="flex items-center justify-center h-full">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                    </div>
+                    <ChatSkeleton />
                 ) : (
-                    messages.map((message, index) => {
-                        const isOwnMessage = message.senderId === currentUser.id;
-                        const showDateSeparator = shouldShowDateSeparator(message, messages[index - 1]);
+                    <>
+                        {/* Load More Button */}
+                        {hasMore && messages.length > 0 && (
+                            <div className="flex justify-center mb-4">
+                                <button
+                                    onClick={loadMoreMessages}
+                                    disabled={loadingMore}
+                                    className="px-4 py-2 bg-[#202c33] hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {loadingMore ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500"></div>
+                                            <span>Loading...</span>
+                                        </>
+                                    ) : (
+                                        <span>Load More Messages</span>
+                                    )}
+                                </button>
+                            </div>
+                        )}
 
-                        // Check if message is deleted
-                        if (message.deletedForEveryone) {
+                        {/* Messages */}
+                        {messages.map((message, index) => {
+                            const isOwnMessage = message.senderId === currentUser.id;
+                            const showDateSeparator = shouldShowDateSeparator(message, messages[index - 1]);
+
+                            // Check if message is deleted
+                            if (message.deletedForEveryone) {
+                                return (
+                                    <React.Fragment key={message.id}>
+                                        {showDateSeparator && (
+                                            <div className="flex justify-center my-4">
+                                                <span className="bg-gray-800 text-gray-400 text-xs px-3 py-1 rounded-full">{formatDateSeparator(message.timestamp)}</span>
+                                            </div>
+                                        )}
+                                        <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                                            <div className="bg-[#2a3942] text-gray-400 italic rounded-lg px-4 py-2 text-sm flex items-center gap-2 opacity-60">
+                                                <FiTrash2 size={14} />
+                                                <span>This message was deleted</span>
+                                            </div>
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            }
+
                             return (
                                 <React.Fragment key={message.id}>
                                     {showDateSeparator && (
@@ -676,170 +772,154 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                                             <span className="bg-gray-800 text-gray-400 text-xs px-3 py-1 rounded-full">{formatDateSeparator(message.timestamp)}</span>
                                         </div>
                                     )}
-                                    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-                                        <div className="bg-[#2a3942] text-gray-400 italic rounded-lg px-4 py-2 text-sm flex items-center gap-2">
-                                            <FiTrash2 size={14} />
-                                            <span>This message was deleted</span>
+                                    <div
+                                        id={`msg-${message.id}`}
+                                        className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                                        onContextMenu={(e) => handleContextMenu(e, message)}
+                                    >
+                                        <div className={`relative max-w-[85%] sm:max-w-[70%] rounded-lg shadow-md transition-all hover:scale-[1.02] ${highlightedMessageId === message.id ? 'ring-2 ring-yellow-400' : ''
+                                            } ${isOwnMessage ? 'bg-[#005c4b] text-white' : 'bg-[#202c33] text-white'
+                                            } ${message.fileUrl && message.fileType?.startsWith('image') ? 'p-1' : 'px-3 py-2'}`}>
+
+                                            {/* Forwarded Indicator */}
+                                            {message.forwardedFromId && (
+                                                <div className="flex items-center gap-1 text-xs text-gray-400 mb-1 italic">
+                                                    <FiShare2 size={12} />
+                                                    <span>Forwarded</span>
+                                                </div>
+                                            )}
+
+                                            {/* File Attachment Rendering */}
+                                            {message.fileUrl && (
+                                                <div className="mb-1 rounded-md overflow-hidden bg-black/10">
+                                                    {message.fileType?.startsWith('image') ? (
+                                                        <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="block">
+                                                            <img
+                                                                src={message.fileUrl}
+                                                                alt="shared"
+                                                                className="max-h-80 w-full object-cover hover:opacity-90 transition-opacity"
+                                                            />
+                                                        </a>
+                                                    ) : message.fileType?.startsWith('audio') ? (
+                                                        <div className="p-2 min-w-[250px] bg-black/10 rounded-md">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <FiMic size={16} className="text-blue-400" />
+                                                                <span className="text-[10px] font-medium opacity-60 uppercase">Voice Note</span>
+                                                            </div>
+                                                            <audio
+                                                                src={message.fileUrl}
+                                                                controls
+                                                                className="w-full h-8 brightness-90 contrast-125"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-3 p-3 bg-black/20 min-w-[200px]">
+                                                            <div className="p-2 bg-gray-700 rounded-lg">
+                                                                <FiFile size={24} className="text-blue-400" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium truncate">{message.fileName || 'Document'}</p>
+                                                                <p className="text-[10px] opacity-60 uppercase">{message.fileType?.split('/')[1] || 'FILE'}</p>
+                                                            </div>
+                                                            <a
+                                                                href={message.fileUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80"
+                                                            >
+                                                                <FiDownload size={18} />
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Message Content */}
+                                            <div
+                                                className={`group relative ${message.fileUrl && message.fileType?.startsWith('image') ? 'px-2 pb-1' : ''}`}
+                                                onMouseEnter={() => setHoveredMessageId(message.id)}
+                                                onMouseLeave={() => setHoveredMessageId(message.id === hoveredMessageId ? null : hoveredMessageId)}
+                                            >
+                                                {/* Reaction Picker and Reply on Hover */}
+                                                {hoveredMessageId === message.id && (
+                                                    <div className={`absolute -top-10 ${isOwnMessage ? 'right-0' : 'left-0'} z-20 bg-[#202c33] border border-gray-700 rounded-full p-1 shadow-xl flex items-center gap-1 animate-in fade-in zoom-in duration-200`}>
+                                                        <div className="flex px-1 border-r border-gray-700 mr-1">
+                                                            <button
+                                                                onClick={() => { setReplyingTo(message); setHoveredMessageId(null); }}
+                                                                className="p-1 hover:bg-gray-700 rounded-full text-blue-400 transition-colors"
+                                                                title="Reply"
+                                                            >
+                                                                <FiCornerUpLeft size={18} />
+                                                            </button>
+                                                        </div>
+                                                        {['👍', '❤️', '😂', '😮', '😢', '😡'].map(emoji => (
+                                                            <button
+                                                                key={emoji}
+                                                                onClick={() => { handleReaction(message.id, emoji); setHoveredMessageId(null); }}
+                                                                className="hover:scale-125 transition-transform p-1 text-lg"
+                                                                title={emoji}
+                                                            >
+                                                                {emoji}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Reply Preview in Message */}
+                                                {message.replyTo && (
+                                                    <div className="mb-1 p-2 rounded bg-black/20 border-l-4 border-blue-500 text-[13px] opacity-80 cursor-pointer"
+                                                        onClick={() => {
+                                                            const targetMsg = document.getElementById(`msg-${message.replyTo.messageId}`);
+                                                            if (targetMsg) targetMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                        }}
+                                                    >
+                                                        <p className="font-bold text-blue-400 text-xs">{message.replyTo.senderName}</p>
+                                                        <p className="truncate">{message.replyTo.content}</p>
+                                                    </div>
+                                                )}
+
+                                                <p className="text-[15px] leading-relaxed break-words">
+                                                    {searchOpen && searchQuery
+                                                        ? highlightText(message.content, searchQuery)
+                                                        : message.content
+                                                    }
+                                                </p>
+
+                                                {/* Reactions Display */}
+                                                {message.reactions && Object.keys(message.reactions).length > 0 && (
+                                                    <div className={`flex flex-wrap gap-0.5 mt-1 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                                                        {Object.entries(message.reactions).reduce((acc, [uid, emoji]) => {
+                                                            const existing = acc.find(r => r.emoji === emoji);
+                                                            if (existing) existing.count++;
+                                                            else acc.push({ emoji, count: 1 });
+                                                            return acc;
+                                                        }, []).map(reaction => (
+                                                            <span
+                                                                key={reaction.emoji}
+                                                                className="inline-flex items-center bg-gray-700/50 backdrop-blur-sm px-1.5 py-0.5 rounded-full text-[12px] border border-gray-600/50"
+                                                            >
+                                                                {reaction.emoji} {reaction.count > 1 && reaction.count}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isOwnMessage ? 'text-blue-100/70' : 'text-gray-400'}`}>
+                                                    <span>{formatMessageDate(message.timestamp)}</span>
+                                                    {isOwnMessage && (
+                                                        <div className="flex">
+                                                            <FiCheck size={12} className={(message.isRead || message.read) ? 'text-blue-400' : ''} />
+                                                            {(message.isRead || message.read) && <FiCheck size={12} className="text-blue-400 -ml-2" />}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </React.Fragment>
                             );
-                        }
-
-                        return (
-                            <React.Fragment key={message.id}>
-                                {showDateSeparator && (
-                                    <div className="flex justify-center my-4">
-                                        <span className="bg-gray-800 text-gray-400 text-xs px-3 py-1 rounded-full">{formatDateSeparator(message.timestamp)}</span>
-                                    </div>
-                                )}
-                                <div
-                                    id={`msg-${message.id}`}
-                                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                                    onContextMenu={(e) => handleContextMenu(e, message)}
-                                >
-                                    <div className={`relative max-w-[85%] sm:max-w-[70%] rounded-lg shadow-md transition-all ${highlightedMessageId === message.id ? 'ring-2 ring-yellow-400' : ''
-                                        } ${isOwnMessage ? 'bg-[#005c4b] text-white' : 'bg-[#202c33] text-white'
-                                        } ${message.fileUrl && message.fileType?.startsWith('image') ? 'p-1' : 'px-3 py-2'}`}>
-
-                                        {/* Forwarded Indicator */}
-                                        {message.forwardedFromId && (
-                                            <div className="flex items-center gap-1 text-xs text-gray-400 mb-1 italic">
-                                                <FiShare2 size={12} />
-                                                <span>Forwarded</span>
-                                            </div>
-                                        )}
-
-                                        {/* File Attachment Rendering */}
-                                        {message.fileUrl && (
-                                            <div className="mb-1 rounded-md overflow-hidden bg-black/10">
-                                                {message.fileType?.startsWith('image') ? (
-                                                    <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="block">
-                                                        <img
-                                                            src={message.fileUrl}
-                                                            alt="shared"
-                                                            className="max-h-80 w-full object-cover hover:opacity-90 transition-opacity"
-                                                        />
-                                                    </a>
-                                                ) : message.fileType?.startsWith('audio') ? (
-                                                    <div className="p-2 min-w-[250px] bg-black/10 rounded-md">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <FiMic size={16} className="text-blue-400" />
-                                                            <span className="text-[10px] font-medium opacity-60 uppercase">Voice Note</span>
-                                                        </div>
-                                                        <audio
-                                                            src={message.fileUrl}
-                                                            controls
-                                                            className="w-full h-8 brightness-90 contrast-125"
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center gap-3 p-3 bg-black/20 min-w-[200px]">
-                                                        <div className="p-2 bg-gray-700 rounded-lg">
-                                                            <FiFile size={24} className="text-blue-400" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium truncate">{message.fileName || 'Document'}</p>
-                                                            <p className="text-[10px] opacity-60 uppercase">{message.fileType?.split('/')[1] || 'FILE'}</p>
-                                                        </div>
-                                                        <a
-                                                            href={message.fileUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80"
-                                                        >
-                                                            <FiDownload size={18} />
-                                                        </a>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Message Content */}
-                                        <div
-                                            className={`group relative ${message.fileUrl && message.fileType?.startsWith('image') ? 'px-2 pb-1' : ''}`}
-                                            onMouseEnter={() => setHoveredMessageId(message.id)}
-                                            onMouseLeave={() => setHoveredMessageId(message.id === hoveredMessageId ? null : hoveredMessageId)}
-                                        >
-                                            {/* Reaction Picker and Reply on Hover */}
-                                            {hoveredMessageId === message.id && (
-                                                <div className={`absolute -top-10 ${isOwnMessage ? 'right-0' : 'left-0'} z-20 bg-[#202c33] border border-gray-700 rounded-full p-1 shadow-xl flex items-center gap-1 animate-in fade-in zoom-in duration-200`}>
-                                                    <div className="flex px-1 border-r border-gray-700 mr-1">
-                                                        <button
-                                                            onClick={() => { setReplyingTo(message); setHoveredMessageId(null); }}
-                                                            className="p-1 hover:bg-gray-700 rounded-full text-blue-400 transition-colors"
-                                                            title="Reply"
-                                                        >
-                                                            <FiCornerUpLeft size={18} />
-                                                        </button>
-                                                    </div>
-                                                    {['👍', '❤️', '😂', '😮', '😢', '😡'].map(emoji => (
-                                                        <button
-                                                            key={emoji}
-                                                            onClick={() => { handleReaction(message.id, emoji); setHoveredMessageId(null); }}
-                                                            className="hover:scale-125 transition-transform p-1 text-lg"
-                                                            title={emoji}
-                                                        >
-                                                            {emoji}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Reply Preview in Message */}
-                                            {message.replyTo && (
-                                                <div className="mb-1 p-2 rounded bg-black/20 border-l-4 border-blue-500 text-[13px] opacity-80 cursor-pointer"
-                                                    onClick={() => {
-                                                        const targetMsg = document.getElementById(`msg-${message.replyTo.messageId}`);
-                                                        if (targetMsg) targetMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                    }}
-                                                >
-                                                    <p className="font-bold text-blue-400 text-xs">{message.replyTo.senderName}</p>
-                                                    <p className="truncate">{message.replyTo.content}</p>
-                                                </div>
-                                            )}
-
-                                            <p className="text-[15px] leading-relaxed break-words">
-                                                {searchOpen && searchQuery
-                                                    ? highlightText(message.content, searchQuery)
-                                                    : message.content
-                                                }
-                                            </p>
-
-                                            {/* Reactions Display */}
-                                            {message.reactions && Object.keys(message.reactions).length > 0 && (
-                                                <div className={`flex flex-wrap gap-0.5 mt-1 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-                                                    {Object.entries(message.reactions).reduce((acc, [uid, emoji]) => {
-                                                        const existing = acc.find(r => r.emoji === emoji);
-                                                        if (existing) existing.count++;
-                                                        else acc.push({ emoji, count: 1 });
-                                                        return acc;
-                                                    }, []).map(reaction => (
-                                                        <span
-                                                            key={reaction.emoji}
-                                                            className="inline-flex items-center bg-gray-700/50 backdrop-blur-sm px-1.5 py-0.5 rounded-full text-[12px] border border-gray-600/50"
-                                                        >
-                                                            {reaction.emoji} {reaction.count > 1 && reaction.count}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isOwnMessage ? 'text-blue-100/70' : 'text-gray-400'}`}>
-                                                <span>{formatMessageDate(message.timestamp)}</span>
-                                                {isOwnMessage && (
-                                                    <div className="flex">
-                                                        <FiCheck size={12} className={(message.isRead || message.read) ? 'text-blue-400' : ''} />
-                                                        {(message.isRead || message.read) && <FiCheck size={12} className="text-blue-400 -ml-2" />}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </React.Fragment>
-                        );
-                    })
+                        })}
+                    </>
                 )}
                 {uploading && (
                     <div className="flex justify-end">
@@ -931,7 +1011,7 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             {/* Context Menu */}
             {contextMenu && (
                 <div
-                    className="fixed z-50 bg-[#202c33] border border-gray-700 rounded-lg shadow-2xl py-1 min-w-[180px] animate-in fade-in zoom-in-95 duration-150"
+                    className="fixed z-50 bg-[#202c33] border border-gray-700 rounded-lg shadow-2xl py-1 min-w-[180px] animate-in fade-in zoom-in-95 duration-200"
                     style={{
                         left: `${contextMenu.x}px`,
                         top: `${contextMenu.y}px`,

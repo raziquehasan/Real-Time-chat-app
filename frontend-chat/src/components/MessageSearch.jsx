@@ -3,16 +3,26 @@ import { FiSearch, FiX, FiChevronUp, FiChevronDown } from 'react-icons/fi';
 
 const MessageSearch = ({ messages, onClose, onJumpToMessage }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedQuery, setDebouncedQuery] = useState('');
     const [matchingIndices, setMatchingIndices] = useState([]);
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
+    // Debounce search query (300ms)
     useEffect(() => {
-        if (searchQuery.trim()) {
+        const timer = setTimeout(() => {
+            setDebouncedQuery(searchQuery);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        if (debouncedQuery.trim()) {
             // Find all messages that match the search query
             const matches = messages
                 .map((msg, index) => ({ msg, index }))
                 .filter(({ msg }) =>
-                    msg.content.toLowerCase().includes(searchQuery.toLowerCase())
+                    msg.content.toLowerCase().includes(debouncedQuery.toLowerCase())
                 );
             setMatchingIndices(matches.map(m => m.index));
             setCurrentMatchIndex(0);
@@ -20,7 +30,7 @@ const MessageSearch = ({ messages, onClose, onJumpToMessage }) => {
             setMatchingIndices([]);
             setCurrentMatchIndex(0);
         }
-    }, [searchQuery, messages]);
+    }, [debouncedQuery, messages]);
 
     const goToNext = () => {
         if (matchingIndices.length > 0) {
@@ -64,9 +74,9 @@ const MessageSearch = ({ messages, onClose, onJumpToMessage }) => {
                 {/* Result Count */}
                 {searchQuery && (
                     <span className="text-xs text-gray-400 whitespace-nowrap">
-                        {matchingIndices.length > 0
+                        {debouncedQuery && matchingIndices.length > 0
                             ? `${currentMatchIndex + 1} of ${matchingIndices.length}`
-                            : 'No results'}
+                            : debouncedQuery ? 'No results' : 'Searching...'}
                     </span>
                 )}
 

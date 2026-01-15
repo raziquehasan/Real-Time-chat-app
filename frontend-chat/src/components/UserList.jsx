@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import UserListSkeleton from './UserListSkeleton';
 import { usersAPI } from '../services/api';
 import { FiSearch, FiUser, FiCircle } from 'react-icons/fi';
 import { formatDistanceToNow } from 'date-fns';
@@ -107,9 +108,7 @@ const UserList = ({ onSelectUser, selectedUserId, stompClient }) => {
             {/* User List */}
             <div className="flex-1 overflow-y-auto">
                 {loading ? (
-                    <div className="flex items-center justify-center h-32">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                    </div>
+                    <UserListSkeleton />
                 ) : error ? (
                     <div className="p-4 text-center text-red-400">{error}</div>
                 ) : filteredUsers.length === 0 ? (
