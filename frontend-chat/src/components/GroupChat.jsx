@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiSend, FiPaperclip, FiMoreVertical, FiInfo, FiUsers } from 'react-icons/fi';
+import { FiSend, FiPaperclip, FiMoreVertical, FiInfo, FiUsers, FiUserPlus, FiTrash2, FiLogOut } from 'react-icons/fi';
 import { groupAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,11 +12,16 @@ const GroupChat = ({ group, stompClient, currentUser, onShowInfo, onShowMembers 
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [replyTo, setReplyTo] = useState(null);
+    const [showMenu, setShowMenu] = useState(false);
+    const [showAddMember, setShowAddMember] = useState(false);
+    const [groupMembers, setGroupMembers] = useState([]);
     const messagesEndRef = useRef(null);
+    const menuRef = useRef(null);
 
     useEffect(() => {
         if (group) {
             loadMessages();
+            loadMembers();
             subscribeToGroup();
         }
     }, [group]);
@@ -24,6 +29,25 @@ const GroupChat = ({ group, stompClient, currentUser, onShowInfo, onShowMembers 
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setShowMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const loadMembers = async () => {
+        try {
+            const members = await groupAPI.getMembers(group.id);
+            setGroupMembers(members);
+        } catch (error) {
+            console.error('Failed to load members:', error);
+        }
+    };
 
     const loadMessages = async () => {
         try {
