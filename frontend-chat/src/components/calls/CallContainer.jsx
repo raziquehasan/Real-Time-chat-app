@@ -94,8 +94,9 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
     const handleSignalingMessage = useCallback(async (signal) => {
         switch (signal.type) {
             case 'call:ring':
+                console.log("🔔 Call Ringing Signal Received:", signal);
                 if (callStatus !== 'IDLE' && callStatus !== 'RINGING') {
-                    // Send BUSY signal
+                    console.log("Busy: Already in a call");
                     callAPI.declineCall(signal.sessionId);
                     return;
                 }
@@ -105,38 +106,46 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 break;
 
             case 'call:offer':
-                console.log("Incoming offer received from:", signal.senderId);
+                console.log("📥 Incoming Offer received from:", signal.senderId);
                 if (webRTCServiceRef.current) {
                     const { answer, stream } = await webRTCServiceRef.current.handleOffer(signal.data, signal.senderId, signal.sessionId);
                     setLocalStream(stream);
                     setCallStatus('ACTIVE');
 
+                    console.log("📤 Sending Answer to:", signal.senderId);
                     stompClient.publish({
                         destination: '/app/call/answer',
                         body: JSON.stringify({
                             type: 'call:answer',
                             sessionId: signal.sessionId,
+                            senderId: currentUser.id, // Fixed: Added senderId
                             targetId: signal.senderId,
                             data: answer
                         })
                     });
+                } else {
+                    console.error("WebRTC Service not available for offer");
                 }
                 break;
 
             case 'call:answer':
-                console.log("Incoming answer received from:", signal.senderId);
+                console.log("📥 Incoming Answer received from:", signal.senderId);
                 if (webRTCServiceRef.current) {
                     await webRTCServiceRef.current.handleAnswer(signal.data, signal.senderId);
+                } else {
+                    console.error("WebRTC Service not available for answer");
                 }
                 break;
 
             case 'call:candidate':
+                console.log("📥 Incoming ICE Candidate from:", signal.senderId);
                 if (webRTCServiceRef.current) {
                     await webRTCServiceRef.current.handleCandidate(signal.data, signal.senderId);
                 }
                 break;
 
             case 'call:accepted':
+                console.log("✅ Call Accepted by:", signal.userId);
                 toast.success('Call accepted');
                 // Caller starts the WebRTC offer
                 startWebRTCFlow(signal.userId);

@@ -132,6 +132,7 @@ class WebRTCService {
     }
 
     async handleCandidate(candidate, senderId) {
+        if (!candidate) return; // End of candidate gathering
         const pc = this.peerConnections[senderId];
         if (pc) {
             console.log("Adding ICE candidate from:", senderId);
