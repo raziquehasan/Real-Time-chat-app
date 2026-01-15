@@ -79,7 +79,8 @@ const GroupList = ({ onSelectGroup, stompClient, currentUser }) => {
                             <div
                                 key={group.id}
                                 onClick={() => onSelectGroup(group)}
-                                className="p-4 hover:bg-[#1a252d] cursor-pointer transition-colors"
+                                className={`p-4 hover:bg-[#1a252d] cursor-pointer transition-colors ${selectedGroupId === group.id ? 'bg-[#1a252d]' : ''
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">

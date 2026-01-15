@@ -5,7 +5,9 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import UserList from '../components/UserList';
 import PrivateChat from '../components/PrivateChat';
-import { FiLogOut, FiMessageCircle } from 'react-icons/fi';
+import GroupList from '../components/GroupList';
+import GroupChat from '../components/GroupChat';
+import { FiLogOut, FiMessageCircle, FiUsers, FiUser } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { authAPI, callAPI } from '../services/api';
 import CallContainer from '../components/calls/CallContainer';
@@ -14,6 +16,8 @@ const ChatApp = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [selectedUser, setSelectedUser] = useState(null);
+    const [selectedGroup, setSelectedGroup] = useState(null);
+    const [activeTab, setActiveTab] = useState('private'); // 'private' or 'groups'
     const [stompClient, setStompClient] = useState(null);
     const [connected, setConnected] = useState(false);
     const clientRef = useRef(null);
@@ -105,7 +109,13 @@ const ChatApp = () => {
     };
 
     const handleSelectUser = (u) => {
+        setSelectedGroup(null);
         setSelectedUser(u);
+    };
+
+    const handleSelectGroup = (g) => {
+        setSelectedUser(null);
+        setSelectedGroup(g);
     };
 
     const callContainerRef = useRef(null);
@@ -161,22 +171,71 @@ const ChatApp = () => {
 
             {/* Main Chat Area */}
             <div className="flex-1 flex overflow-hidden">
-                {/* User List Sidebar */}
-                <div className="w-80 flex-shrink-0">
-                    <UserList
-                        onSelectUser={handleSelectUser}
-                        selectedUserId={selectedUser?.id}
-                        stompClient={stompClient}
-                    />
+                {/* Fixed Sidebar for Tab Switching */}
+                <div className="w-16 flex-shrink-0 bg-gray-950 flex flex-col items-center py-6 gap-6 border-r border-gray-800">
+                    <button
+                        onClick={() => setActiveTab('private')}
+                        className={`p-3 rounded-xl transition-all ${activeTab === 'private'
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                                : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                        title="Direct Messages"
+                    >
+                        <FiUser size={24} />
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('groups')}
+                        className={`p-3 rounded-xl transition-all ${activeTab === 'groups'
+                                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                                : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                        title="Group Chats"
+                    >
+                        <FiUsers size={24} />
+                    </button>
                 </div>
 
-                {/* Chat Area */}
-                <div className="flex-1">
-                    <PrivateChat
-                        selectedUser={selectedUser}
-                        stompClient={stompClient}
-                        onInitiateCall={handleInitiateCall}
-                    />
+                {/* Sidebar List (Conditional) */}
+                <div className="w-80 flex-shrink-0">
+                    {activeTab === 'private' ? (
+                        <UserList
+                            onSelectUser={handleSelectUser}
+                            selectedUserId={selectedUser?.id}
+                            stompClient={stompClient}
+                        />
+                    ) : (
+                        <GroupList
+                            onSelectGroup={handleSelectGroup}
+                            selectedGroupId={selectedGroup?.id}
+                            stompClient={stompClient}
+                            currentUser={user}
+                        />
+                    )}
+                </div>
+
+                {/* Chat Area (Conditional) */}
+                <div className="flex-1 bg-[#0b141a]">
+                    {selectedUser ? (
+                        <PrivateChat
+                            selectedUser={selectedUser}
+                            stompClient={stompClient}
+                            onInitiateCall={handleInitiateCall}
+                        />
+                    ) : selectedGroup ? (
+                        <GroupChat
+                            group={selectedGroup}
+                            stompClient={stompClient}
+                            currentUser={user}
+                        />
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-500 bg-[#0b141a]">
+                            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6">
+                                <FiMessageCircle size={48} className="opacity-20" />
+                            </div>
+                            <h2 className="text-xl font-medium text-gray-400">Select a chat to start messaging</h2>
+                            <p className="text-sm mt-2 opacity-60">Your messages are end-to-end encrypted</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
