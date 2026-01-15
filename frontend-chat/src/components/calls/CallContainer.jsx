@@ -126,7 +126,9 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
                 setLocalStream(stream);
 
+                // Set status and a skeleton session immediately
                 setCallStatus('OUTGOING');
+                setCallSession({ id: 'pending', callType: type, groupCall: isGroup, groupId: groupId });
                 setInitiator({ id: targetId, name: 'Calling...' });
 
                 const session = await callAPI.startCall({

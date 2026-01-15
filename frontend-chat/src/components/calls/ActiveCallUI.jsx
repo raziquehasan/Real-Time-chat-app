@@ -104,7 +104,7 @@ const ActiveCallUI = ({
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
                         <span className="text-white font-medium text-lg">
-                            {callSession.groupCall ? `Group: ${callSession.groupId}` : 'In Call'}
+                            {callSession?.groupCall ? `Group: ${callSession.groupId}` : 'In Call'}
                         </span>
                         <span className="text-gray-300 text-sm flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
