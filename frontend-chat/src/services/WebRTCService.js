@@ -95,27 +95,27 @@ class WebRTCService {
     }
 
     async handleOffer(offer, senderId, sessionId) {
-        if (!this.localStream) {
-            await this.getLocalStream(true);
-        }
+        console.log("Handling incoming offer from:", senderId);
 
+        // 1. Get Local Stream First (Media-First)
+        const stream = await this.getLocalStream(true);
+
+        // 2. Create Peer Connection
         const pc = this.createPeerConnection(senderId, sessionId);
+
+        // 3. Set remote offer
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+        // 4. Attach tracks BEFORE creating answer
         this.addLocalStreamToPeer(pc);
 
+        // 5. Create Answer
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
-        console.log("Answer created and sent to:", senderId);
-        this.stompClient.publish({
-            destination: '/app/call/answer',
-            body: JSON.stringify({
-                type: 'call:answer',
-                sessionId,
-                targetId: senderId,
-                data: answer
-            })
-        });
+        console.log("Answer created for:", senderId);
+
+        return { answer, stream };
     }
 
     async handleAnswer(answer, senderId) {
@@ -123,6 +123,8 @@ class WebRTCService {
         if (pc) {
             console.log("Setting remote description (answer) for:", senderId);
             await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        } else {
+            console.warn("Received answer but no peer connection found for:", senderId);
         }
     }
 
@@ -130,7 +132,13 @@ class WebRTCService {
         const pc = this.peerConnections[senderId];
         if (pc) {
             console.log("Adding ICE candidate from:", senderId);
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (e) {
+                console.error("Error adding received ice candidate", e);
+            }
+        } else {
+            console.warn("Received ICE candidate but no peer connection found for:", senderId);
         }
     }
 

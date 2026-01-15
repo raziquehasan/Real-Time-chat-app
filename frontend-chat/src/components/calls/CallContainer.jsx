@@ -49,6 +49,13 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
         }
     }));
 
+    const signalingHandlerRef = useRef(null);
+
+    // Update handler ref whenever state changes
+    useEffect(() => {
+        signalingHandlerRef.current = handleSignalingMessage;
+    }, [handleSignalingMessage]);
+
     // Initialize WebRTC Service
     useEffect(() => {
         if (stompClient && connected) {
@@ -60,8 +67,9 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             );
 
             const subscription = stompClient.subscribe('/user/queue/calls', (message) => {
-                const signal = JSON.parse(message.body);
-                handleSignalingMessage(signal);
+                if (signalingHandlerRef.current) {
+                    signalingHandlerRef.current(JSON.parse(message.body));
+                }
             });
 
             return () => {
@@ -69,7 +77,7 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 cleanup();
             };
         }
-    }, [stompClient, connected, currentUser.id]);
+    }, [stompClient, connected]); // Dependencies reduced to avoid resubscription
 
     const cleanup = () => {
         if (webRTCServiceRef.current) {
@@ -85,8 +93,8 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
     const handleSignalingMessage = useCallback(async (signal) => {
         switch (signal.type) {
             case 'call:ring':
-                if (callStatus !== 'IDLE') {
-                    // Send BUSY signal (implementation simplified: decline)
+                if (callStatus !== 'IDLE' && callStatus !== 'RINGING') {
+                    // Send BUSY signal
                     callAPI.declineCall(signal.sessionId);
                     return;
                 }
@@ -96,12 +104,26 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 break;
 
             case 'call:offer':
+                console.log("Incoming offer received from:", signal.senderId);
                 if (webRTCServiceRef.current) {
-                    await webRTCServiceRef.current.handleOffer(signal.data, signal.senderId, signal.sessionId);
+                    const { answer, stream } = await webRTCServiceRef.current.handleOffer(signal.data, signal.senderId, signal.sessionId);
+                    setLocalStream(stream);
+                    setCallStatus('ACTIVE');
+
+                    stompClient.publish({
+                        destination: '/app/call/answer',
+                        body: JSON.stringify({
+                            type: 'call:answer',
+                            sessionId: signal.sessionId,
+                            targetId: signal.senderId,
+                            data: answer
+                        })
+                    });
                 }
                 break;
 
             case 'call:answer':
+                console.log("Incoming answer received from:", signal.senderId);
                 if (webRTCServiceRef.current) {
                     await webRTCServiceRef.current.handleAnswer(signal.data, signal.senderId);
                 }
