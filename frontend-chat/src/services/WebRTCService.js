@@ -1,6 +1,7 @@
 class WebRTCService {
-    constructor(stompClient, onRemoteStream) {
+    constructor(stompClient, currentUserId, onRemoteStream) {
         this.stompClient = stompClient;
+        this.currentUserId = currentUserId;
         this.onRemoteStream = onRemoteStream;
         this.peerConnections = {}; // Support for group calls (mesh)
         this.localStream = null;
@@ -49,6 +50,7 @@ class WebRTCService {
                     body: JSON.stringify({
                         type: 'call:candidate',
                         sessionId,
+                        senderId: this.currentUserId,
                         targetId,
                         data: event.candidate
                     })
@@ -88,6 +90,7 @@ class WebRTCService {
             body: JSON.stringify({
                 type: 'call:offer',
                 sessionId,
+                senderId: this.currentUserId,
                 targetId,
                 data: offer
             })

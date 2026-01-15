@@ -155,7 +155,7 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             default:
                 break;
         }
-    }, [callStatus, stompClient, startWebRTCFlow, cleanup]);
+    }, [callStatus, stompClient, startWebRTCFlow, cleanup, currentUser]);
 
     // 3. Effects (Restored critical initialization)
     useEffect(() => {
@@ -163,10 +163,11 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
     }, [handleSignalingMessage]);
 
     useEffect(() => {
-        if (stompClient && connected) {
+        if (stompClient && connected && currentUser) {
             console.log("Initializing WebRTC Service via Effect...");
             webRTCServiceRef.current = new WebRTCService(
                 stompClient,
+                currentUser.id,
                 (peerId, stream) => {
                     setRemoteStreams(prev => ({ ...prev, [peerId]: stream }));
                 }
@@ -183,7 +184,7 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 cleanup();
             };
         }
-    }, [stompClient, connected, cleanup]);
+    }, [stompClient, connected, currentUser, cleanup]);
 
     const handleAccept = useCallback(async () => {
         try {
