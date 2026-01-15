@@ -222,8 +222,6 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             )}
         </>
     );
-};
-
 });
 
 export default CallContainer;
