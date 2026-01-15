@@ -315,8 +315,8 @@ This project is licensed under the MIT License.
 ## 👨‍💻 Author
 
 **Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+- GitHub: [@raziquehasan](https://github.com/raziquehasan)
+- Email: hasanrazique@gmail.com
 
 ---
 
@@ -324,6 +324,7 @@ This project is licensed under the MIT License.
 
 - Inspired by WhatsApp and Telegram
 - Built with ❤️ using Spring Boot and React
+- Built by Razique Hasan
 
 ---
 
