@@ -59,7 +59,7 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 }
             );
 
-            const subscription = stompClient.subscribe(`/user/${currentUser.id}/queue/calls`, (message) => {
+            const subscription = stompClient.subscribe('/user/queue/calls', (message) => {
                 const signal = JSON.parse(message.body);
                 handleSignalingMessage(signal);
             });

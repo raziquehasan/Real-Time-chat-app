@@ -37,14 +37,16 @@ const ChatApp = () => {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 },
                 reconnectDelay: 5000,
-                heartbeatIncoming: 10000,
-                heartbeatOutgoing: 10000,
+                heartbeatIncoming: 25000,
+                heartbeatOutgoing: 25000,
                 debug: (str) => {
-                    console.log('STOMP: ' + str);
+                    if (import.meta.env.DEV) console.log('STOMP: ' + str);
                 },
                 onConnect: () => {
                     console.log('✅ WebSocket Connected');
                     setConnected(true);
+                    // Force refresh status on connect
+                    client.publish({ destination: '/app/user/status', body: 'ONLINE' });
                     toast.success('Connected to chat server', {
                         icon: '🔌',
                         style: {
