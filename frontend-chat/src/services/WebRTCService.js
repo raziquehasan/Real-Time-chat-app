@@ -1,8 +1,7 @@
 class WebRTCService {
-    constructor(stompClient, onRemoteStream, onIceCandidate) {
+    constructor(stompClient, onRemoteStream) {
         this.stompClient = stompClient;
         this.onRemoteStream = onRemoteStream;
-        this.onIceCandidate = onIceCandidate;
         this.peerConnections = {}; // Support for group calls (mesh)
         this.localStream = null;
         this.config = {
@@ -13,10 +12,16 @@ class WebRTCService {
         };
     }
 
-    async getLocalStream(video = true, audio = true) {
+    async getLocalStream(video = true) {
+        console.log("Requesting media devices...");
         if (this.localStream) return this.localStream;
+
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia({ video, audio });
+            this.localStream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: video
+            });
+            console.log("Local stream acquired:", this.localStream);
             return this.localStream;
         } catch (error) {
             console.error("Error accessing media devices:", error);
@@ -24,10 +29,20 @@ class WebRTCService {
         }
     }
 
-    createPeerConnection(targetId, sessionId) {
-        const pc = new RTCPeerConnection(this.config);
+    addLocalStreamToPeer(peerConnection) {
+        if (!this.localStream) {
+            console.error("Local stream not initialized");
+            return;
+        }
 
-        pc.onicecandidate = (event) => {
+        this.localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, this.localStream);
+            console.log("Track added to peer:", track.kind);
+        });
+    }
+
+    setupPeerEvents(peerConnection, sessionId, targetId) {
+        peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 this.stompClient.publish({
                     destination: '/app/call/candidate',
@@ -41,27 +56,33 @@ class WebRTCService {
             }
         };
 
-        pc.ontrack = (event) => {
+        peerConnection.ontrack = (event) => {
+            console.log("Remote stream received from:", targetId);
             if (this.onRemoteStream) {
                 this.onRemoteStream(targetId, event.streams[0]);
             }
         };
+    }
 
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.localStream);
-            });
-        }
-
+    createPeerConnection(targetId, sessionId) {
+        const pc = new RTCPeerConnection(this.config);
+        this.setupPeerEvents(pc, sessionId, targetId);
         this.peerConnections[targetId] = pc;
         return pc;
     }
 
     async createOffer(targetId, sessionId) {
+        if (!this.localStream) {
+            await this.getLocalStream(true);
+        }
+
         const pc = this.createPeerConnection(targetId, sessionId);
+        this.addLocalStreamToPeer(pc);
+
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
+        console.log("Offer created and sent to:", targetId);
         this.stompClient.publish({
             destination: '/app/call/offer',
             body: JSON.stringify({
@@ -74,11 +95,18 @@ class WebRTCService {
     }
 
     async handleOffer(offer, senderId, sessionId) {
+        if (!this.localStream) {
+            await this.getLocalStream(true);
+        }
+
         const pc = this.createPeerConnection(senderId, sessionId);
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        this.addLocalStreamToPeer(pc);
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
+        console.log("Answer created and sent to:", senderId);
         this.stompClient.publish({
             destination: '/app/call/answer',
             body: JSON.stringify({
@@ -93,6 +121,7 @@ class WebRTCService {
     async handleAnswer(answer, senderId) {
         const pc = this.peerConnections[senderId];
         if (pc) {
+            console.log("Setting remote description (answer) for:", senderId);
             await pc.setRemoteDescription(new RTCSessionDescription(answer));
         }
     }
@@ -100,6 +129,7 @@ class WebRTCService {
     async handleCandidate(candidate, senderId) {
         const pc = this.peerConnections[senderId];
         if (pc) {
+            console.log("Adding ICE candidate from:", senderId);
             await pc.addIceCandidate(new RTCIceCandidate(candidate));
         }
     }

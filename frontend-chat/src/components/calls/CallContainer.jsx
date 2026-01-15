@@ -103,11 +103,14 @@ const CallContainer = ({ stompClient, currentUser, connected }) => {
 
     const startWebRTCFlow = async (targetId) => {
         try {
-            const stream = await webRTCServiceRef.current.getLocalStream(isVideoEnabled, true);
+            console.log("Initiating WebRTC flow for:", targetId);
+            const isVideo = callSession.callType === 'VIDEO';
+            const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
             setLocalStream(stream);
             await webRTCServiceRef.current.createOffer(targetId, callSession.id);
             setCallStatus('ACTIVE');
         } catch (error) {
+            console.error("WebRTC Flow Error:", error);
             toast.error('Could not start media stream');
             cleanup();
         }
@@ -115,11 +118,15 @@ const CallContainer = ({ stompClient, currentUser, connected }) => {
 
     const handleAccept = async () => {
         try {
-            await callAPI.acceptCall(callSession.id);
-            const stream = await webRTCServiceRef.current.getLocalStream(isVideoEnabled, true);
+            console.log("Call accepted, preparing media...");
+            const isVideo = callSession.callType === 'VIDEO';
+            const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
             setLocalStream(stream);
+
+            await callAPI.acceptCall(callSession.id);
             setCallStatus('ACTIVE');
         } catch (error) {
+            console.error("Accept Call Error:", error);
             toast.error('Failed to accept call');
             cleanup();
         }
