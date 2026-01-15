@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { privateChatAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { FiSend, FiPaperclip, FiMoreVertical, FiUser, FiCircle, FiFile, FiDownload, FiCheck, FiMic, FiSquare, FiCornerUpLeft, FiX } from 'react-icons/fi';
+import { FiSend, FiPaperclip, FiMoreVertical, FiUser, FiCircle, FiFile, FiDownload, FiCheck, FiMic, FiSquare, FiCornerUpLeft, FiX, FiSearch, FiShare2, FiTrash2 } from 'react-icons/fi';
 import { format, isToday, isYesterday, isSameDay, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
+import ForwardModal from './ForwardModal';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
+import MessageSearch from './MessageSearch';
 
 const PrivateChat = ({ selectedUser, stompClient }) => {
     const { user: currentUser } = useAuth();
@@ -19,6 +22,17 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
     const [replyingTo, setReplyingTo] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
+
+    // New states for premium features
+    const [contextMenu, setContextMenu] = useState(null);
+    const [forwardModalOpen, setForwardModalOpen] = useState(false);
+    const [messageToForward, setMessageToForward] = useState(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [messageToDelete, setMessageToDelete] = useState(null);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+    const [pendingDeletes, setPendingDeletes] = useState(new Map());
 
     const messagesEndRef = useRef(null);
     const messageContainerRef = useRef(null);
@@ -115,11 +129,31 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
             }
         );
 
+        // Subscribe to delete message events
+        const deleteSubscription = stompClient.subscribe(
+            `/user/queue/delete-message`,
+            (message) => {
+                const deleteNotification = JSON.parse(message.body);
+                console.log('🗑️ Received delete notification:', deleteNotification);
+
+                if (deleteNotification.deleteType === 'FOR_EVERYONE') {
+                    setMessages((prev) =>
+                        prev.map((msg) =>
+                            msg.id === deleteNotification.messageId
+                                ? { ...msg, deletedForEveryone: true, deletedAt: new Date() }
+                                : msg
+                        )
+                    );
+                }
+            }
+        );
+
         return () => {
             if (messageSubscription) messageSubscription.unsubscribe();
             if (typingSubscription) typingSubscription.unsubscribe();
             if (readReceiptSubscription) readReceiptSubscription.unsubscribe();
             if (reactionSubscription) reactionSubscription.unsubscribe();
+            if (deleteSubscription) deleteSubscription.unsubscribe();
         };
     }, [stompClient, stompClient?.connected, currentUser, selectedUser]);
 
@@ -395,6 +429,153 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
         return format(date, 'MMMM dd, yyyy');
     };
 
+    // Context menu handlers
+    const handleContextMenu = (e, message) => {
+        e.preventDefault();
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            message
+        });
+    };
+
+    const handleLongPress = (message) => {
+        setContextMenu({
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+            message
+        });
+    };
+
+    // Close context menu on outside click
+    useEffect(() => {
+        const handleClick = () => setContextMenu(null);
+        if (contextMenu) {
+            document.addEventListener('click', handleClick);
+            return () => document.removeEventListener('click', handleClick);
+        }
+    }, [contextMenu]);
+
+    // Forward message handler
+    const handleForward = async (receiverIds) => {
+        try {
+            await privateChatAPI.forwardMessage(messageToForward.id, receiverIds);
+            toast.success(`Message forwarded to ${receiverIds.length} contact${receiverIds.length > 1 ? 's' : ''}`);
+            setForwardModalOpen(false);
+            setMessageToForward(null);
+        } catch (error) {
+            console.error('Failed to forward message:', error);
+            toast.error('Failed to forward message');
+        }
+    };
+
+    // Delete message handler
+    const handleDeleteConfirm = async (deleteType) => {
+        try {
+            await privateChatAPI.deleteMessage(messageToDelete.id, deleteType);
+
+            // Show undo toast
+            const toastId = toast((t) => (
+                <div className="flex items-center gap-3">
+                    <span>Message deleted</span>
+                    <button
+                        onClick={() => {
+                            // Remove from pending deletes
+                            setPendingDeletes(prev => {
+                                const newMap = new Map(prev);
+                                newMap.delete(messageToDelete.id);
+                                return newMap;
+                            });
+                            toast.dismiss(t.id);
+                            toast.success('Delete cancelled');
+                        }}
+                        className="px-3 py-1 bg-blue-500 hover:bg-blue-600 rounded text-white text-sm font-medium"
+                    >
+                        Undo
+                    </button>
+                </div>
+            ), {
+                duration: 5000,
+                icon: '🗑️'
+            });
+
+            // Add to pending deletes
+            setPendingDeletes(prev => new Map(prev).set(messageToDelete.id, { deleteType, toastId }));
+
+            // After 5 seconds, apply the delete
+            setTimeout(() => {
+                setPendingDeletes(prev => {
+                    const newMap = new Map(prev);
+                    if (newMap.has(messageToDelete.id)) {
+                        newMap.delete(messageToDelete.id);
+
+                        // Apply delete to messages
+                        if (deleteType === 'FOR_ME') {
+                            setMessages(prevMessages =>
+                                prevMessages.filter(msg => msg.id !== messageToDelete.id)
+                            );
+                        } else if (deleteType === 'FOR_EVERYONE') {
+                            setMessages(prevMessages =>
+                                prevMessages.map(msg =>
+                                    msg.id === messageToDelete.id
+                                        ? { ...msg, deletedForEveryone: true, deletedAt: new Date() }
+                                        : msg
+                                )
+                            );
+                        }
+                    }
+                    return newMap;
+                });
+            }, 5000);
+
+            setDeleteDialogOpen(false);
+            setMessageToDelete(null);
+        } catch (error) {
+            console.error('Failed to delete message:', error);
+            toast.error('Failed to delete message');
+        }
+    };
+
+    // Search handlers
+    const handleJumpToMessage = (message) => {
+        setHighlightedMessageId(message.id);
+        const element = document.getElementById(`msg-${message.id}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Flash highlight
+            setTimeout(() => setHighlightedMessageId(null), 2000);
+        }
+    };
+
+    // Keyboard shortcut for search (Ctrl+F)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                setSearchOpen(true);
+            }
+            if (e.key === 'Escape') {
+                setSearchOpen(false);
+                setContextMenu(null);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Highlight search matches
+    const highlightText = (text, query) => {
+        if (!query || !searchOpen) return text;
+        const parts = text.split(new RegExp(`(${query})`, 'gi'));
+        return parts.map((part, i) =>
+            part.toLowerCase() === query.toLowerCase() ? (
+                <mark key={i} className="bg-yellow-400 text-black rounded px-0.5">{part}</mark>
+            ) : (
+                part
+            )
+        );
+    };
+
     if (!selectedUser) {
         return (
             <div className="h-full flex items-center justify-center bg-gray-900 text-gray-400">
@@ -448,10 +629,28 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                         </div>
                     </div>
                 </div>
-                <button className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400">
-                    <FiMoreVertical size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setSearchOpen(!searchOpen)}
+                        className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400 hover:text-white"
+                        title="Search messages (Ctrl+F)"
+                    >
+                        <FiSearch size={20} />
+                    </button>
+                    <button className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400">
+                        <FiMoreVertical size={20} />
+                    </button>
+                </div>
             </div>
+
+            {/* Search Bar */}
+            {searchOpen && (
+                <MessageSearch
+                    messages={messages}
+                    onClose={() => setSearchOpen(false)}
+                    onJumpToMessage={handleJumpToMessage}
+                />
+            )}
 
             {/* Messages Area */}
             <div
@@ -468,6 +667,25 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                         const isOwnMessage = message.senderId === currentUser.id;
                         const showDateSeparator = shouldShowDateSeparator(message, messages[index - 1]);
 
+                        // Check if message is deleted
+                        if (message.deletedForEveryone) {
+                            return (
+                                <React.Fragment key={message.id}>
+                                    {showDateSeparator && (
+                                        <div className="flex justify-center my-4">
+                                            <span className="bg-gray-800 text-gray-400 text-xs px-3 py-1 rounded-full">{formatDateSeparator(message.timestamp)}</span>
+                                        </div>
+                                    )}
+                                    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                                        <div className="bg-[#2a3942] text-gray-400 italic rounded-lg px-4 py-2 text-sm flex items-center gap-2">
+                                            <FiTrash2 size={14} />
+                                            <span>This message was deleted</span>
+                                        </div>
+                                    </div>
+                                </React.Fragment>
+                            );
+                        }
+
                         return (
                             <React.Fragment key={message.id}>
                                 {showDateSeparator && (
@@ -475,9 +693,22 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                                         <span className="bg-gray-800 text-gray-400 text-xs px-3 py-1 rounded-full">{formatDateSeparator(message.timestamp)}</span>
                                     </div>
                                 )}
-                                <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`relative max-w-[85%] sm:max-w-[70%] rounded-lg shadow-md ${isOwnMessage ? 'bg-[#005c4b] text-white' : 'bg-[#202c33] text-white'
+                                <div
+                                    id={`msg-${message.id}`}
+                                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                                    onContextMenu={(e) => handleContextMenu(e, message)}
+                                >
+                                    <div className={`relative max-w-[85%] sm:max-w-[70%] rounded-lg shadow-md transition-all ${highlightedMessageId === message.id ? 'ring-2 ring-yellow-400' : ''
+                                        } ${isOwnMessage ? 'bg-[#005c4b] text-white' : 'bg-[#202c33] text-white'
                                         } ${message.fileUrl && message.fileType?.startsWith('image') ? 'p-1' : 'px-3 py-2'}`}>
+
+                                        {/* Forwarded Indicator */}
+                                        {message.forwardedFromId && (
+                                            <div className="flex items-center gap-1 text-xs text-gray-400 mb-1 italic">
+                                                <FiShare2 size={12} />
+                                                <span>Forwarded</span>
+                                            </div>
+                                        )}
 
                                         {/* File Attachment Rendering */}
                                         {message.fileUrl && (
@@ -568,7 +799,12 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                                                 </div>
                                             )}
 
-                                            <p className="text-[15px] leading-relaxed break-words">{message.content}</p>
+                                            <p className="text-[15px] leading-relaxed break-words">
+                                                {searchOpen && searchQuery
+                                                    ? highlightText(message.content, searchQuery)
+                                                    : message.content
+                                                }
+                                            </p>
 
                                             {/* Reactions Display */}
                                             {message.reactions && Object.keys(message.reactions).length > 0 && (
@@ -691,6 +927,75 @@ const PrivateChat = ({ selectedUser, stompClient }) => {
                     )}
                 </form>
             </div>
+
+            {/* Context Menu */}
+            {contextMenu && (
+                <div
+                    className="fixed z-50 bg-[#202c33] border border-gray-700 rounded-lg shadow-2xl py-1 min-w-[180px] animate-in fade-in zoom-in-95 duration-150"
+                    style={{
+                        left: `${contextMenu.x}px`,
+                        top: `${contextMenu.y}px`,
+                    }}
+                >
+                    <button
+                        onClick={() => {
+                            setReplyingTo(contextMenu.message);
+                            setContextMenu(null);
+                        }}
+                        className="w-full px-4 py-2 text-left text-white hover:bg-gray-700 transition-colors flex items-center gap-3"
+                    >
+                        <FiCornerUpLeft size={16} className="text-blue-400" />
+                        <span>Reply</span>
+                    </button>
+                    <button
+                        onClick={() => {
+                            setMessageToForward(contextMenu.message);
+                            setForwardModalOpen(true);
+                            setContextMenu(null);
+                        }}
+                        className="w-full px-4 py-2 text-left text-white hover:bg-gray-700 transition-colors flex items-center gap-3"
+                    >
+                        <FiShare2 size={16} className="text-green-400" />
+                        <span>Forward</span>
+                    </button>
+                    <button
+                        onClick={() => {
+                            setMessageToDelete(contextMenu.message);
+                            setDeleteDialogOpen(true);
+                            setContextMenu(null);
+                        }}
+                        className="w-full px-4 py-2 text-left text-white hover:bg-gray-700 transition-colors flex items-center gap-3"
+                    >
+                        <FiTrash2 size={16} className="text-red-400" />
+                        <span>Delete</span>
+                    </button>
+                </div>
+            )}
+
+            {/* Forward Modal */}
+            {forwardModalOpen && messageToForward && (
+                <ForwardModal
+                    message={messageToForward}
+                    onClose={() => {
+                        setForwardModalOpen(false);
+                        setMessageToForward(null);
+                    }}
+                    onForward={handleForward}
+                />
+            )}
+
+            {/* Delete Confirm Dialog */}
+            {deleteDialogOpen && messageToDelete && (
+                <DeleteConfirmDialog
+                    message={messageToDelete}
+                    isSender={messageToDelete.senderId === currentUser.id}
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => {
+                        setDeleteDialogOpen(false);
+                        setMessageToDelete(null);
+                    }}
+                />
+            )}
         </div>
     );
 };

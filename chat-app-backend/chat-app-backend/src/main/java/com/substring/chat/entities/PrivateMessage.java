@@ -13,7 +13,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 @Document(collection = "private_messages")
 @CompoundIndexes({
@@ -55,6 +57,15 @@ public class PrivateMessage {
     private Map<String, String> reactions = new HashMap<>(); // userId -> emoji
 
     private ReplyDetails replyTo;
+
+    // For message forwarding
+    private String forwardedFromId;
+    private String forwardedFromName;
+
+    // For message deletion (soft delete)
+    private Set<String> deletedFor = new HashSet<>(); // User IDs who deleted this message "for me"
+    private boolean deletedForEveryone = false;
+    private LocalDateTime deletedAt;
 
     public PrivateMessage(String senderId, String senderName, String receiverId, String receiverName, String content) {
         this.senderId = senderId;

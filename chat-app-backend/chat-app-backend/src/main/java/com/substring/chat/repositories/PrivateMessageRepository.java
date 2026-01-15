@@ -35,4 +35,12 @@ public interface PrivateMessageRepository extends MongoRepository<PrivateMessage
                         "{ $sort: { timestamp: -1 } }"
         })
         List<PrivateMessage> findConversationsAggregation(String userId);
+
+        // Search messages between two users by content
+        @Query("{ $or: [ " +
+                        "{ 'senderId': ?0, 'receiverId': ?1, 'content': { $regex: ?2, $options: 'i' } }, " +
+                        "{ 'senderId': ?1, 'receiverId': ?0, 'content': { $regex: ?2, $options: 'i' } } " +
+                        "] }")
+        List<PrivateMessage> searchMessagesBetweenUsers(String userId1, String userId2, String searchQuery,
+                        Pageable pageable);
 }

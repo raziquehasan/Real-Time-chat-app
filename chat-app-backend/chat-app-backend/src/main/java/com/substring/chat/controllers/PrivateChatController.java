@@ -2,6 +2,8 @@ package com.substring.chat.controllers;
 
 import com.substring.chat.entities.PrivateMessage;
 import com.substring.chat.entities.User;
+import com.substring.chat.payload.DeleteMessageRequest;
+import com.substring.chat.payload.ForwardMessageRequest;
 import com.substring.chat.payload.PrivateMessageRequest;
 import com.substring.chat.payload.ReactionRequest;
 import com.substring.chat.payload.TypingRequest;
@@ -412,6 +414,208 @@ public class PrivateChatController {
                         return ResponseEntity.ok(message);
                 } catch (Exception e) {
                         return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+                }
+        }
+
+        /**
+         * Forward message to multiple recipients
+         * POST /api/private/forward
+         */
+        @PostMapping("/forward")
+        public ResponseEntity<?> forwardMessage(@RequestBody ForwardMessageRequest request) {
+                try {
+                        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                        String email = authentication.getName();
+                        User currentUser = userRepository.findByEmail(email)
+                                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+                        // Get original message
+                        PrivateMessage originalMessage = privateMessageRepository.findById(request.getMessageId())
+                                        .orElseThrow(() -> new RuntimeException("Message not found"));
+
+                        // Verify user has access to this message
+                        if (!originalMessage.getSenderId().equals(currentUser.getId())
+                                        && !originalMessage.getReceiverId().equals(currentUser.getId())) {
+                                return ResponseEntity.badRequest()
+                                                .body(Map.of("message", "You don't have access to this message"));
+                        }
+
+                        List<PrivateMessage> forwardedMessages = new ArrayList<>();
+
+                        // Create forwarded message for each recipient
+                        for (String receiverId : request.getReceiverIds()) {
+                                User receiver = userRepository.findById(receiverId)
+                                                .orElseThrow(() -> new RuntimeException(
+                                                                "Receiver not found: " + receiverId));
+
+                                PrivateMessage forwardedMessage = new PrivateMessage(
+                                                currentUser.getId(),
+                                                currentUser.getName(),
+                                                receiverId,
+                                                receiver.getName(),
+                                                originalMessage.getContent());
+
+                                // Copy file attachments if present
+                                if (originalMessage.getFileUrl() != null) {
+                                        forwardedMessage.setFileUrl(originalMessage.getFileUrl());
+                                        forwardedMessage.setFileType(originalMessage.getFileType());
+                                        forwardedMessage.setFileName(originalMessage.getFileName());
+                                }
+
+                                // Set forwarding metadata
+                                forwardedMessage.setForwardedFromId(originalMessage.getId());
+                                forwardedMessage.setForwardedFromName(originalMessage.getSenderName());
+
+                                PrivateMessage savedMessage = privateMessageRepository.save(forwardedMessage);
+                                forwardedMessages.add(savedMessage);
+
+                                // Notify receiver via WebSocket
+                                messagingTemplate.convertAndSendToUser(
+                                                receiverId,
+                                                "/queue/messages",
+                                                savedMessage);
+
+                                // Notify sender for confirmation
+                                messagingTemplate.convertAndSendToUser(
+                                                currentUser.getId(),
+                                                "/queue/messages",
+                                                savedMessage);
+                        }
+
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("message", "Message forwarded successfully");
+                        response.put("count", forwardedMessages.size());
+                        response.put("forwardedMessages", forwardedMessages);
+
+                        return ResponseEntity.ok(response);
+                } catch (Exception e) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "Failed to forward: " + e.getMessage()));
+                }
+        }
+
+        /**
+         * Delete message (soft delete)
+         * DELETE /api/private/messages/{messageId}
+         */
+        @DeleteMapping("/messages/{messageId}")
+        public ResponseEntity<?> deleteMessage(
+                        @PathVariable String messageId,
+                        @RequestParam String deleteType) {
+                try {
+                        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                        String email = authentication.getName();
+                        User currentUser = userRepository.findByEmail(email)
+                                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+                        PrivateMessage message = privateMessageRepository.findById(messageId)
+                                        .orElseThrow(() -> new RuntimeException("Message not found"));
+
+                        // Verify user has access to this message
+                        if (!message.getSenderId().equals(currentUser.getId())
+                                        && !message.getReceiverId().equals(currentUser.getId())) {
+                                return ResponseEntity.badRequest()
+                                                .body(Map.of("message", "You don't have access to this message"));
+                        }
+
+                        if ("FOR_ME".equals(deleteType)) {
+                                // Add current user to deletedFor set
+                                if (message.getDeletedFor() == null) {
+                                        message.setDeletedFor(new HashSet<>());
+                                }
+                                message.getDeletedFor().add(currentUser.getId());
+                                privateMessageRepository.save(message);
+
+                                return ResponseEntity.ok(Map.of(
+                                                "message", "Message deleted for you",
+                                                "messageId", messageId,
+                                                "deleteType", "FOR_ME"));
+
+                        } else if ("FOR_EVERYONE".equals(deleteType)) {
+                                // Only sender can delete for everyone
+                                if (!message.getSenderId().equals(currentUser.getId())) {
+                                        return ResponseEntity.badRequest()
+                                                        .body(Map.of("message", "Only sender can delete for everyone"));
+                                }
+
+                                // Mark as deleted for everyone
+                                message.setDeletedForEveryone(true);
+                                message.setDeletedAt(LocalDateTime.now());
+                                privateMessageRepository.save(message);
+
+                                // Notify other participant via WebSocket
+                                String otherUserId = message.getReceiverId().equals(currentUser.getId())
+                                                ? message.getSenderId()
+                                                : message.getReceiverId();
+
+                                Map<String, Object> deleteNotification = new HashMap<>();
+                                deleteNotification.put("messageId", messageId);
+                                deleteNotification.put("deleteType", "FOR_EVERYONE");
+                                deleteNotification.put("deletedBy", currentUser.getId());
+
+                                messagingTemplate.convertAndSendToUser(
+                                                otherUserId,
+                                                "/queue/delete-message",
+                                                deleteNotification);
+
+                                return ResponseEntity.ok(Map.of(
+                                                "message", "Message deleted for everyone",
+                                                "messageId", messageId,
+                                                "deleteType", "FOR_EVERYONE"));
+                        } else {
+                                return ResponseEntity.badRequest()
+                                                .body(Map.of("message",
+                                                                "Invalid delete type. Use FOR_ME or FOR_EVERYONE"));
+                        }
+                } catch (Exception e) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "Failed to delete: " + e.getMessage()));
+                }
+        }
+
+        /**
+         * Search messages between users
+         * GET /api/private/{userId}/search
+         */
+        @GetMapping("/{userId}/search")
+        public ResponseEntity<?> searchMessages(
+                        @PathVariable String userId,
+                        @RequestParam String query,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "50") int size) {
+                try {
+                        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                        String currentUserEmail = authentication.getName();
+                        User currentUser = userRepository.findByEmail(currentUserEmail)
+                                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+                        // Create pageable with sorting by timestamp descending
+                        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
+
+                        // Search messages
+                        List<PrivateMessage> messages = privateMessageRepository
+                                        .searchMessagesBetweenUsers(currentUser.getId(), userId, query, pageable);
+
+                        // Filter out deleted messages for current user
+                        List<PrivateMessage> filteredMessages = messages.stream()
+                                        .filter(msg -> !msg.isDeletedForEveryone()
+                                                        && (msg.getDeletedFor() == null
+                                                                        || !msg.getDeletedFor()
+                                                                                        .contains(currentUser.getId())))
+                                        .collect(Collectors.toList());
+
+                        // Reverse to get chronological order
+                        Collections.reverse(filteredMessages);
+
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("messages", filteredMessages);
+                        response.put("count", filteredMessages.size());
+                        response.put("query", query);
+
+                        return ResponseEntity.ok(response);
+                } catch (Exception e) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "Search failed: " + e.getMessage()));
                 }
         }
 }

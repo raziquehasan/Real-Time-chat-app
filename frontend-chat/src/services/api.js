@@ -113,6 +113,25 @@ export const privateChatAPI = {
         const response = await api.put('/api/private/react', reactionRequest);
         return response.data;
     },
+
+    forwardMessage: async (messageId, receiverIds) => {
+        const response = await api.post('/api/private/forward', { messageId, receiverIds });
+        return response.data;
+    },
+
+    deleteMessage: async (messageId, deleteType) => {
+        const response = await api.delete(`/api/private/messages/${messageId}`, {
+            params: { deleteType }
+        });
+        return response.data;
+    },
+
+    searchMessages: async (userId, query, page = 0, size = 50) => {
+        const response = await api.get(`/api/private/${userId}/search`, {
+            params: { query, page, size }
+        });
+        return response.data;
+    },
 };
 
 // Files API calls
