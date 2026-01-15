@@ -24,6 +24,20 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 setIsVideoEnabled(isVideo);
 
                 // 1. Get Local Media First
+                if (!webRTCServiceRef.current) {
+                    console.error("WebRTC Service not initialized. Attempting recovery...");
+                    if (stompClient && connected) {
+                        webRTCServiceRef.current = new WebRTCService(
+                            stompClient,
+                            (peerId, stream) => {
+                                setRemoteStreams(prev => ({ ...prev, [peerId]: stream }));
+                            }
+                        );
+                    } else {
+                        throw new Error("Cannot initiate call: Connectivity lost.");
+                    }
+                }
+
                 const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
                 setLocalStream(stream);
 
@@ -141,6 +155,34 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 break;
         }
     }, [callStatus, stompClient, startWebRTCFlow, cleanup]);
+
+    // 3. Effects (Restored critical initialization)
+    useEffect(() => {
+        signalingHandlerRef.current = handleSignalingMessage;
+    }, [handleSignalingMessage]);
+
+    useEffect(() => {
+        if (stompClient && connected) {
+            console.log("Initializing WebRTC Service via Effect...");
+            webRTCServiceRef.current = new WebRTCService(
+                stompClient,
+                (peerId, stream) => {
+                    setRemoteStreams(prev => ({ ...prev, [peerId]: stream }));
+                }
+            );
+
+            const subscription = stompClient.subscribe('/user/queue/calls', (message) => {
+                if (signalingHandlerRef.current) {
+                    signalingHandlerRef.current(JSON.parse(message.body));
+                }
+            });
+
+            return () => {
+                subscription.unsubscribe();
+                cleanup();
+            };
+        }
+    }, [stompClient, connected, cleanup]);
 
     const handleAccept = useCallback(async () => {
         try {
