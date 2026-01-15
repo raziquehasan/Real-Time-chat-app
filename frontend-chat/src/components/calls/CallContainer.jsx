@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { callAPI } from '../services/api';
-import WebRTCService from '../services/WebRTCService';
+import { callAPI } from '../../services/api';
+import WebRTCService from '../../services/WebRTCService';
 import IncomingCallModal from './IncomingCallModal';
 import ActiveCallUI from './ActiveCallUI';
 import toast from 'react-hot-toast';
