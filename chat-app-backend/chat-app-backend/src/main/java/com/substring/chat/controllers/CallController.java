@@ -36,6 +36,8 @@ public class CallController {
 
         CallSession session = callService.startCall(
                 initiator.getId(),
+                initiator.getName(),
+                initiator.getAvatarUrl(),
                 request.getParticipantIds(),
                 request.getCallType(),
                 request.isGroupCall(),

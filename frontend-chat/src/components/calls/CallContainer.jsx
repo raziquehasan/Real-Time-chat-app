@@ -129,29 +129,51 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
         }
     }, [callSession, cleanup]);
 
+    // Notification permission
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }, []);
+
+    // ... Sound logic ...
+
+    const showNotification = useCallback((title, options) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, options);
+        }
+    }, []);
+
     const handleSignalingMessage = useCallback(async (signal) => {
         // Signal deduplication
         const signalId = `${signal.type}-${signal.sessionId}-${signal.senderId || signal.userId || 'system'}`;
         if (processedSignalsRef.current.has(signalId)) {
-            console.log("♻️ Skipping redundant signal:", signal.type);
             return;
-        }
-
-        // Don't deduplicate candidates - they are multiple by nature
-        if (signal.type !== 'call:candidate' && signal.type !== 'call:ring') {
-            processedSignalsRef.current.add(signalId);
         }
 
         switch (signal.type) {
             case 'call:ring':
+                if (processedSignalsRef.current.has(`ring-${signal.sessionId}`)) return;
+                processedSignalsRef.current.add(`ring-${signal.sessionId}`);
+
                 console.log("🔔 Call Ringing Signal Received:", signal);
                 if (callStatus !== 'IDLE' && callStatus !== 'RINGING') {
-                    console.log("Busy: Already in a call");
                     callAPI.declineCall(signal.sessionId);
                     return;
                 }
+
+                showNotification("Incoming Call", {
+                    body: `${signal.initiatorName || 'Someone'} is calling you`,
+                    icon: '/favicon.ico',
+                    tag: 'incoming-call'
+                });
+
                 setCallSession({ id: signal.sessionId, callType: signal.callType, groupCall: signal.isGroup, groupId: signal.groupId });
-                setInitiator({ id: signal.initiatorId, name: signal.initiatorName || 'Incoming Call' });
+                setInitiator({
+                    id: signal.initiatorId,
+                    name: signal.initiatorName || 'Incoming Call',
+                    avatarUrl: signal.initiatorAvatarUrl
+                });
                 setCallStatus('RINGING');
                 break;
 
@@ -309,6 +331,7 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                     localStream={localStream}
                     remoteStreams={remoteStreams}
                     callSession={callSession}
+                    otherParticipant={initiator}
                     onEndCall={handleEndCall}
                     isMuted={isMuted}
                     isVideoEnabled={isVideoEnabled}

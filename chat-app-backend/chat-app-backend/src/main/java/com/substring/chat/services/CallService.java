@@ -20,7 +20,8 @@ public class CallService {
     private final CallHistoryRepository callHistoryRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public CallSession startCall(String initiatorId, List<String> participantIds, CallType type, boolean isGroup,
+    public CallSession startCall(String initiatorId, String initiatorName, String initiatorAvatarUrl,
+            List<String> participantIds, CallType type, boolean isGroup,
             String groupId) {
         // Create new session
         CallSession session = CallSession.builder()
@@ -40,6 +41,8 @@ public class CallService {
         ringPayload.put("type", "call:ring");
         ringPayload.put("sessionId", savedSession.getId());
         ringPayload.put("initiatorId", initiatorId);
+        ringPayload.put("initiatorName", initiatorName);
+        ringPayload.put("initiatorAvatarUrl", initiatorAvatarUrl);
         ringPayload.put("callType", type);
         ringPayload.put("isGroup", isGroup);
         ringPayload.put("groupId", groupId);

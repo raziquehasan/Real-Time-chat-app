@@ -4,29 +4,54 @@ import { FiMaximize, FiMinimize, FiMoreHorizontal } from 'react-icons/fi';
 
 const RemoteVideo = ({ peerId, stream }) => {
     const videoRef = useRef(null);
+    const [isPaused, setIsPaused] = useState(false);
 
     useEffect(() => {
         if (videoRef.current && stream && videoRef.current.srcObject !== stream) {
-            console.log(`Attaching remote stream for ${peerId}`);
+            console.log(`📡 Attaching remote stream for ${peerId}`);
             videoRef.current.srcObject = stream;
 
-            // Explicitly play to handle autoplay restrictions
-            const playPromise = videoRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.warn("Autoplay was prevented:", error);
-                });
-            }
+            const attemptPlay = () => {
+                const playPromise = videoRef.current.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        setIsPaused(false);
+                    }).catch(error => {
+                        console.warn("⚠️ Autoplay prevented:", error);
+                        setIsPaused(true);
+                    });
+                }
+            };
+
+            attemptPlay();
         }
     }, [stream, peerId]);
 
+    const handleManualPlay = () => {
+        if (videoRef.current) {
+            videoRef.current.play().then(() => setIsPaused(false));
+        }
+    };
+
     return (
-        <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-        />
+        <div className="relative w-full h-full">
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
+            />
+            {isPaused && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-30">
+                    <button
+                        onClick={handleManualPlay}
+                        className="p-4 bg-green-500 rounded-full text-white animate-bounce shadow-lg"
+                    >
+                        Tap to Start Video
+                    </button>
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -34,6 +59,7 @@ const ActiveCallUI = ({
     localStream,
     remoteStreams,
     callSession,
+    otherParticipant,
     onEndCall,
     onToggleMute,
     onToggleVideo,
@@ -133,11 +159,19 @@ const ActiveCallUI = ({
 
                 {/* Empty State if no remote stream yet */}
                 {Object.keys(remoteStreams).length === 0 && (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
-                        <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse mb-4">
-                            <div className="w-12 h-12 rounded-full bg-blue-500/40"></div>
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-[#111b21]">
+                        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#00a884]/30 mb-8 relative">
+                            <div className="absolute inset-0 rounded-full border-4 border-[#00a884] animate-ping opacity-20"></div>
+                            {otherParticipant?.avatarUrl ? (
+                                <img src={otherParticipant.avatarUrl} alt={otherParticipant.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-[#202c33] flex items-center justify-center text-5xl text-white font-bold">
+                                    {otherParticipant?.name?.charAt(0) || '?'}
+                                </div>
+                            )}
                         </div>
-                        <p className="text-gray-400 font-medium">Connecting...</p>
+                        <h3 className="text-white text-xl font-medium mb-2">{otherParticipant?.name || 'Someone'}</h3>
+                        <p className="text-[#8696a0] font-medium animate-pulse">Connecting media...</p>
                     </div>
                 )}
             </div>
