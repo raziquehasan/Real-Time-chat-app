@@ -19,7 +19,11 @@ class WebRTCService {
 
         try {
             this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: true, // Always request audio
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                },
                 video: video
             });
             console.log("Local stream acquired:", this.localStream);
