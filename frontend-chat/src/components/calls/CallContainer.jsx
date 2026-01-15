@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { callAPI } from '../../services/api';
 import WebRTCService from '../../services/WebRTCService';
 import IncomingCallModal from './IncomingCallModal';
 import ActiveCallUI from './ActiveCallUI';
 import toast from 'react-hot-toast';
 
-const CallContainer = ({ stompClient, currentUser, connected }) => {
+const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) => {
     const [callSession, setCallSession] = useState(null);
-    const [callStatus, setCallStatus] = useState('IDLE'); // IDLE, RINGING, ACTIVE
+    const [callStatus, setCallStatus] = useState('IDLE'); // IDLE, RINGING, OUTGOING, ACTIVE
     const [localStream, setLocalStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState({});
     const [initiator, setInitiator] = useState(null);
@@ -15,6 +15,39 @@ const CallContainer = ({ stompClient, currentUser, connected }) => {
     const [isVideoEnabled, setIsVideoEnabled] = useState(true);
 
     const webRTCServiceRef = useRef(null);
+
+    useImperativeHandle(ref, () => ({
+        initiateCall: async (targetId, type, isGroup = false, groupId = null) => {
+            try {
+                console.log("Starting outgoing call to:", targetId);
+                const isVideo = type === 'VIDEO';
+                setIsVideoEnabled(isVideo);
+
+                // 1. Get Local Media First
+                const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
+                setLocalStream(stream);
+
+                setCallStatus('OUTGOING');
+                setCallSession({ id: null, callType: type, groupCall: isGroup, groupId: groupId });
+                setInitiator({ id: targetId, name: 'Calling...' }); // Placeholder for recipient info
+
+                // 2. Call Backend API
+                const session = await callAPI.startCall({
+                    participantIds: [targetId],
+                    callType: type,
+                    groupCall: isGroup,
+                    groupId: groupId
+                });
+
+                setCallSession(prev => ({ ...prev, id: session.id }));
+                console.log("Backend session started:", session.id);
+            } catch (error) {
+                console.error("Call Initiation Error:", error);
+                toast.error('Could not initiate call');
+                cleanup();
+            }
+        }
+    }));
 
     // Initialize WebRTC Service
     useEffect(() => {
@@ -175,7 +208,7 @@ const CallContainer = ({ stompClient, currentUser, connected }) => {
                 />
             )}
 
-            {callStatus === 'ACTIVE' && (
+            {(callStatus === 'ACTIVE' || callStatus === 'OUTGOING') && (
                 <ActiveCallUI
                     localStream={localStream}
                     remoteStreams={remoteStreams}
@@ -190,5 +223,7 @@ const CallContainer = ({ stompClient, currentUser, connected }) => {
         </>
     );
 };
+
+});
 
 export default CallContainer;

@@ -106,18 +106,12 @@ const ChatApp = () => {
         setSelectedUser(u);
     };
 
+    const callContainerRef = useRef(null);
+
     // Function to initiate a call (to be passed to components)
-    const handleInitiateCall = async (targetId, type, isGroup = false, groupId = null) => {
-        try {
-            await callAPI.startCall({
-                participantIds: [targetId],
-                callType: type,
-                groupCall: isGroup,
-                groupId: groupId
-            });
-            toast.success(`Calling...`);
-        } catch (error) {
-            toast.error('Could not initiate call');
+    const handleInitiateCall = (targetId, type, isGroup = false, groupId = null) => {
+        if (callContainerRef.current) {
+            callContainerRef.current.initiateCall(targetId, type, isGroup, groupId);
         }
     };
 
@@ -186,6 +180,7 @@ const ChatApp = () => {
 
             {/* Call Management */}
             <CallContainer
+                ref={callContainerRef}
                 stompClient={stompClient}
                 currentUser={user}
                 connected={connected}
