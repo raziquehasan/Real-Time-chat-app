@@ -74,7 +74,7 @@ public class GroupMemberController {
                     groupId,
                     targetUser.getId(),
                     targetUser.getName(),
-                    targetUser.getProfilePicture(),
+                    targetUser.getAvatarUrl(),
                     user.getId());
 
             return ResponseEntity.ok(member);

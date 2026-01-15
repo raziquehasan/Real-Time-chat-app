@@ -88,7 +88,7 @@ public class GroupMessageController {
         message.setGroupId(groupId);
         message.setSenderId(user.getId());
         message.setSenderName(user.getName());
-        message.setSenderAvatar(user.getProfilePicture());
+        message.setSenderAvatar(user.getAvatarUrl());
         message.setContent(request.getContent());
         message.setMentionedUserIds(request.getMentionedUserIds());
         message.setTimestamp(LocalDateTime.now());
@@ -133,7 +133,7 @@ public class GroupMessageController {
         message.setGroupId(groupId);
         message.setSenderId(user.getId());
         message.setSenderName(user.getName());
-        message.setSenderAvatar(user.getProfilePicture());
+        message.setSenderAvatar(user.getAvatarUrl());
         message.setContent("📊 " + request.getQuestion());
         message.setTimestamp(LocalDateTime.now());
 

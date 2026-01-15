@@ -122,7 +122,7 @@ public class ChannelController {
         message.setChannelId(id);
         message.setAuthorId(user.getId());
         message.setAuthorName(user.getName());
-        message.setAuthorAvatar(user.getProfilePicture());
+        message.setAuthorAvatar(user.getAvatarUrl());
         message.setContent(request.getContent());
         message.setTimestamp(LocalDateTime.now());
 

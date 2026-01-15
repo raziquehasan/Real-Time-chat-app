@@ -146,7 +146,7 @@ public class GroupController {
                     inviteLink,
                     user.getId(),
                     user.getName(),
-                    user.getProfilePicture());
+                    user.getAvatarUrl());
 
             return ResponseEntity.ok(group);
         } catch (Exception e) {
