@@ -3,6 +3,7 @@ import { FiSend, FiPaperclip, FiMoreVertical, FiInfo, FiUsers, FiUserPlus, FiTra
 import { groupAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+import AddMemberModal from './AddMemberModal';
 
 const GroupChat = ({ group, stompClient, currentUser, onShowInfo, onShowMembers }) => {
     const [messages, setMessages] = useState([]);
