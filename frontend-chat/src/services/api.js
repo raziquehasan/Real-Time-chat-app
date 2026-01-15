@@ -148,6 +148,98 @@ export const filesAPI = {
     },
 };
 
+// Group API calls
+export const groupAPI = {
+    createGroup: async (data) => {
+        const response = await api.post('/api/groups', data);
+        return response.data;
+    },
+    getMyGroups: async () => {
+        const response = await api.get('/api/groups/my');
+        return response.data;
+    },
+    getGroup: async (groupId) => {
+        const response = await api.get(`/api/groups/${groupId}`);
+        return response.data;
+    },
+    updateGroup: async (groupId, data) => {
+        const response = await api.put(`/api/groups/${groupId}`, data);
+        return response.data;
+    },
+    deleteGroup: async (groupId) => {
+        const response = await api.delete(`/api/groups/${groupId}`);
+        return response.data;
+    },
+    joinViaInvite: async (inviteLink) => {
+        const response = await api.post(`/api/groups/join/${inviteLink}`);
+        return response.data;
+    },
+    getMembers: async (groupId) => {
+        const response = await api.get(`/api/groups/${groupId}/members`);
+        return response.data;
+    },
+    addMember: async (groupId, userId) => {
+        const response = await api.post(`/api/groups/${groupId}/members`, { userId });
+        return response.data;
+    },
+    removeMember: async (groupId, userId) => {
+        const response = await api.delete(`/api/groups/${groupId}/members/${userId}`);
+        return response.data;
+    },
+    updateRole: async (groupId, userId, role) => {
+        const response = await api.put(`/api/groups/${groupId}/members/${userId}/role`, { role });
+        return response.data;
+    },
+    getMessages: async (groupId, page = 0, size = 50) => {
+        const response = await api.get(`/api/groups/${groupId}/messages`, {
+            params: { page, size }
+        });
+        return response.data;
+    },
+    sendMessage: async (groupId, data) => {
+        const response = await api.post(`/api/groups/${groupId}/messages`, data);
+        return response.data;
+    },
+    createPoll: async (groupId, data) => {
+        const response = await api.post(`/api/groups/${groupId}/messages/polls`, data);
+        return response.data;
+    },
+    togglePin: async (groupId, messageId) => {
+        const response = await api.put(`/api/groups/${groupId}/messages/pin/${messageId}`);
+        return response.data;
+    }
+};
+
+// Channel API calls
+export const channelAPI = {
+    createChannel: async (data) => {
+        const response = await api.post('/api/channels', data);
+        return response.data;
+    },
+    getMyChannels: async () => {
+        const response = await api.get('/api/channels/my');
+        return response.data;
+    },
+    subscribe: async (channelId) => {
+        const response = await api.post(`/api/channels/${channelId}/subscribe`);
+        return response.data;
+    },
+    unsubscribe: async (channelId) => {
+        const response = await api.post(`/api/channels/${channelId}/unsubscribe`);
+        return response.data;
+    },
+    broadcastMessage: async (channelId, content) => {
+        const response = await api.post(`/api/channels/${channelId}/messages`, { content });
+        return response.data;
+    },
+    getMessages: async (channelId, page = 0, size = 20) => {
+        const response = await api.get(`/api/channels/${channelId}/messages`, {
+            params: { page, size }
+        });
+        return response.data;
+    }
+};
+
 // Profile API calls
 export const profileAPI = {
     updateProfile: async (data) => {

@@ -41,6 +41,9 @@ public class PrivateChatController {
         @Autowired
         private com.substring.chat.services.FileStorageService fileStorageService;
 
+        @Autowired
+        private com.substring.chat.services.NotificationService notificationService;
+
         /**
          * Integrated API for sending files in private chat
          * POST /api/private/send-file
