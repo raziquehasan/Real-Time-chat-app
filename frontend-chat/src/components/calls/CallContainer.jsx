@@ -22,7 +22,6 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
 
     // Sound initialization
     useEffect(() => {
-        // High-quality ringtone links
         outgoingRingRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
         outgoingRingRef.current.loop = true;
         incomingRingRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/1358/1358-preview.mp3');
@@ -51,19 +50,46 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
         }
     }, [callStatus]);
 
+    const cleanup = useCallback(() => {
+        console.log("🧹 Cleaning up call state and stopping items...");
+        if (webRTCServiceRef.current) {
+            webRTCServiceRef.current.closeAllConnections();
+        }
+
+        // Stop all sounds explicitly
+        if (outgoingRingRef.current) {
+            outgoingRingRef.current.pause();
+            outgoingRingRef.current.currentTime = 0;
+        }
+        if (incomingRingRef.current) {
+            incomingRingRef.current.pause();
+            incomingRingRef.current.currentTime = 0;
+        }
+
+        setLocalStream(null);
+        setRemoteStreams({});
+        setCallSession(null);
+        setCallStatus('IDLE');
+        setInitiator(null);
+        processedSignalsRef.current.clear();
+    }, []);
+
     useImperativeHandle(ref, () => ({
         initiateCall: async (targetId, type, isGroup = false, groupId = null) => {
+            if (callStatus !== 'IDLE') {
+                console.warn("⚠️ Call already in progress, ignoring request");
+                return;
+            }
             try {
-                console.log("Starting outgoing call to:", targetId);
+                console.log("🚀 Starting outgoing call to:", targetId);
                 const isVideo = type === 'VIDEO';
                 setIsVideoEnabled(isVideo);
 
-                // 1. Get Local Media First
                 if (!webRTCServiceRef.current) {
-                    console.error("WebRTC Service not initialized. Attempting recovery...");
                     if (stompClient && connected) {
                         webRTCServiceRef.current = new WebRTCService(
                             stompClient,
+                            currentUser.id,
                             (peerId, stream) => {
                                 setRemoteStreams(prev => ({ ...prev, [peerId]: stream }));
                             }
@@ -78,9 +104,8 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
 
                 setCallStatus('OUTGOING');
                 setCallSession({ id: null, callType: type, groupCall: isGroup, groupId: groupId });
-                setInitiator({ id: targetId, name: 'Calling...' }); // Placeholder for recipient info
+                setInitiator({ id: targetId, name: 'Calling...' });
 
-                // 2. Call Backend API
                 const session = await callAPI.startCall({
                     participantIds: [targetId],
                     callType: type,
@@ -97,19 +122,6 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             }
         }
     }));
-
-    // 2. Callbacks
-    const cleanup = useCallback(() => {
-        if (webRTCServiceRef.current) {
-            webRTCServiceRef.current.closeAllConnections();
-        }
-        setLocalStream(null);
-        setRemoteStreams({});
-        setCallSession(null);
-        setCallStatus('IDLE');
-        setInitiator(null);
-        processedSignalsRef.current.clear();
-    }, []);
 
     const startWebRTCFlow = useCallback(async (targetId) => {
         if (processedSignalsRef.current.has(`flow-${targetId}`)) return;
@@ -129,14 +141,11 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
         }
     }, [callSession, cleanup]);
 
-    // Notification permission
     useEffect(() => {
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
         }
     }, []);
-
-    // ... Sound logic ...
 
     const showNotification = useCallback((title, options) => {
         if ('Notification' in window && Notification.permission === 'granted') {
@@ -145,17 +154,18 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
     }, []);
 
     const handleSignalingMessage = useCallback(async (signal) => {
-        // Signal deduplication
         const signalId = `${signal.type}-${signal.sessionId}-${signal.senderId || signal.userId || 'system'}`;
-        if (processedSignalsRef.current.has(signalId)) {
+
+        // Don't deduplicate candidates - they are multiple by nature
+        if (signal.type !== 'call:candidate' && processedSignalsRef.current.has(signalId)) {
             return;
+        }
+        if (signal.type !== 'call:candidate') {
+            processedSignalsRef.current.add(signalId);
         }
 
         switch (signal.type) {
             case 'call:ring':
-                if (processedSignalsRef.current.has(`ring-${signal.sessionId}`)) return;
-                processedSignalsRef.current.add(`ring-${signal.sessionId}`);
-
                 console.log("🔔 Call Ringing Signal Received:", signal);
                 if (callStatus !== 'IDLE' && callStatus !== 'RINGING') {
                     callAPI.declineCall(signal.sessionId);
@@ -184,19 +194,16 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                     setLocalStream(stream);
                     setCallStatus('ACTIVE');
 
-                    console.log("📤 Sending Answer to:", signal.senderId);
                     stompClient.publish({
                         destination: '/app/call/answer',
                         body: JSON.stringify({
                             type: 'call:answer',
                             sessionId: signal.sessionId,
-                            senderId: currentUser.id, // Fixed: Added senderId
+                            senderId: currentUser.id,
                             targetId: signal.senderId,
                             data: answer
                         })
                     });
-                } else {
-                    console.error("WebRTC Service not available for offer");
                 }
                 break;
 
@@ -204,13 +211,10 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
                 console.log("📥 Incoming Answer received from:", signal.senderId);
                 if (webRTCServiceRef.current) {
                     await webRTCServiceRef.current.handleAnswer(signal.data, signal.senderId);
-                } else {
-                    console.error("WebRTC Service not available for answer");
                 }
                 break;
 
             case 'call:candidate':
-                console.log("📥 Incoming ICE Candidate from:", signal.senderId);
                 if (webRTCServiceRef.current) {
                     await webRTCServiceRef.current.handleCandidate(signal.data, signal.senderId);
                 }
@@ -219,7 +223,6 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             case 'call:accepted':
                 console.log("✅ Call Accepted by:", signal.userId);
                 toast.success('Call accepted');
-                // Caller starts the WebRTC offer
                 startWebRTCFlow(signal.userId);
                 break;
 
@@ -236,9 +239,8 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             default:
                 break;
         }
-    }, [callStatus, stompClient, startWebRTCFlow, cleanup, currentUser]);
+    }, [callStatus, stompClient, startWebRTCFlow, cleanup, currentUser, showNotification]);
 
-    // 3. Effects (Restored critical initialization)
     useEffect(() => {
         signalingHandlerRef.current = handleSignalingMessage;
     }, [handleSignalingMessage]);
@@ -273,7 +275,6 @@ const CallContainer = forwardRef(({ stompClient, currentUser, connected }, ref) 
             const isVideo = callSession.callType === 'VIDEO';
             const stream = await webRTCServiceRef.current.getLocalStream(isVideo);
             setLocalStream(stream);
-
             await callAPI.acceptCall(callSession.id);
             setCallStatus('ACTIVE');
         } catch (error) {
