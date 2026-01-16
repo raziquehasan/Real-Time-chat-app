@@ -85,8 +85,8 @@ const Login = () => {
                             type="button"
                             onClick={() => setLoginMethod('email')}
                             className={`flex-1 py-2 rounded-lg font-semibold transition ${loginMethod === 'email'
-                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                                    : 'text-gray-300 hover:text-white'
+                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                : 'text-gray-300 hover:text-white'
                                 }`}
                         >
                             Email
@@ -95,8 +95,8 @@ const Login = () => {
                             type="button"
                             onClick={() => setLoginMethod('phone')}
                             className={`flex-1 py-2 rounded-lg font-semibold transition ${loginMethod === 'phone'
-                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                                    : 'text-gray-300 hover:text-white'
+                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                : 'text-gray-300 hover:text-white'
                                 }`}
                         >
                             Phone
@@ -120,6 +120,7 @@ const Login = () => {
                                         onChange={handleChange}
                                         placeholder="your@email.com"
                                         className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none"
+                                        autoComplete="email"
                                         required
                                         autoFocus
                                     />
@@ -140,6 +141,7 @@ const Login = () => {
                                         onChange={handleChange}
                                         placeholder="••••••••"
                                         className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none"
+                                        autoComplete="current-password"
                                         required
                                     />
                                 </div>
@@ -150,8 +152,8 @@ const Login = () => {
                                 type="submit"
                                 disabled={loading}
                                 className={`w-full py-3 rounded-lg font-semibold text-white transition-all duration-300 ${loading
-                                        ? 'bg-gray-600 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
+                                    ? 'bg-gray-600 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
                                     }`}
                             >
                                 {loading ? 'Signing in...' : 'Sign In'}
@@ -196,8 +198,8 @@ const Login = () => {
                                 type="submit"
                                 disabled={loading || formData.phoneNumber.length !== 10}
                                 className={`w-full py-3 rounded-lg font-semibold text-white transition-all duration-300 ${loading || formData.phoneNumber.length !== 10
-                                        ? 'bg-gray-600 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
+                                    ? 'bg-gray-600 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
                                     }`}
                             >
                                 {loading ? 'Sending OTP...' : 'Send OTP'}
