@@ -88,7 +88,20 @@ const MessageItem = React.memo(({
 
                 {/* Reply Preview */}
                 {message.replyTo && (
-                    <div className="mb-1 p-2 rounded bg-black/20 border-l-4 border-blue-500 text-[13px] opacity-80 cursor-pointer">
+                    <div
+                        className="bg-gray-700/50 border-l-4 border-blue-500 pl-2 py-1 mb-2 rounded cursor-pointer hover:bg-gray-700/70 transition-colors"
+                        onClick={() => {
+                            const targetMsg = document.getElementById(`msg-${message.replyTo.messageId}`);
+                            if (targetMsg) {
+                                targetMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                // Highlight animation
+                                targetMsg.classList.add('ring-4', 'ring-blue-500', 'ring-opacity-50');
+                                setTimeout(() => {
+                                    targetMsg.classList.remove('ring-4', 'ring-blue-500', 'ring-opacity-50');
+                                }, 2000);
+                            }
+                        }}
+                    >
                         <p className="font-bold text-blue-400 text-xs">{message.replyTo.senderName}</p>
                         <p className="truncate">{message.replyTo.content}</p>
                     </div>

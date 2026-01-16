@@ -293,7 +293,20 @@ const GroupChat = ({ group, stompClient, currentUser, onShowInfo, onShowMembers 
                                     </p>
                                 )}
                                 {message.replyTo && (
-                                    <div className="bg-black/20 p-2 rounded mb-2 text-sm border-l-4 border-[#00a884]">
+                                    <div
+                                        className="bg-[#1f2c33] border-l-4 border-[#00a884] pl-2 py-1 mb-2 rounded cursor-pointer hover:bg-[#2a3942] transition-colors"
+                                        onClick={() => {
+                                            const targetMsg = document.getElementById(`msg-${message.replyTo.messageId}`);
+                                            if (targetMsg) {
+                                                targetMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                // Highlight animation
+                                                targetMsg.classList.add('ring-4', 'ring-[#00a884]', 'ring-opacity-50');
+                                                setTimeout(() => {
+                                                    targetMsg.classList.remove('ring-4', 'ring-[#00a884]', 'ring-opacity-50');
+                                                }, 2000);
+                                            }
+                                        }}
+                                    >
                                         <p className="text-[#00a884] font-medium">{message.replyTo.senderName}</p>
                                         <p className="text-gray-300 truncate">{message.replyTo.content}</p>
                                     </div>
