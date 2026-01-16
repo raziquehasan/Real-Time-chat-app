@@ -98,8 +98,8 @@ const Login = () => {
                             type="submit"
                             disabled={loading}
                             className={`w-full py-3 rounded-lg font-semibold text-white transition-all duration-300 ${loading
-                                    ? 'bg-gray-600 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
+                                ? 'bg-gray-600 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
                                 }`}
                         >
                             {loading ? 'Signing in...' : 'Sign In'}
@@ -125,6 +125,15 @@ const Login = () => {
                                 className="text-purple-400 hover:text-purple-300 font-semibold transition-colors hover:underline"
                             >
                                 Create one now
+                            </Link>
+                        </p>
+                        <p className="text-gray-400 text-sm mt-3">
+                            Or{' '}
+                            <Link
+                                to="/email-otp-login"
+                                className="text-purple-400 hover:text-purple-300 font-semibold transition-colors hover:underline"
+                            >
+                                Login with Email OTP
                             </Link>
                         </p>
                     </div>
