@@ -4,7 +4,7 @@ import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import chatIcon from '../assets/chat.png';
-import { FiMail, FiLock, FiUser, FiMessageCircle } from 'react-icons/fi';
+import { FiMail, FiLock, FiUser, FiMessageCircle, FiPhone } from 'react-icons/fi';
 import AnimatedInput from '../components/AnimatedInput';
 import AnimatedButton from '../components/AnimatedButton';
 import AvatarUpload from '../components/AvatarUpload';
@@ -14,6 +14,7 @@ const Register = () => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        phoneNumber: '',
         password: '',
         confirmPassword: '',
     });
@@ -59,6 +60,12 @@ const Register = () => {
             newErrors.email = 'Email is required';
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
             newErrors.email = 'Email is invalid';
+        }
+
+        if (!formData.phoneNumber) {
+            newErrors.phoneNumber = 'Phone number is required';
+        } else if (!/^[0-9]{10}$/.test(formData.phoneNumber)) {
+            newErrors.phoneNumber = 'Phone number must be 10 digits';
         }
 
         if (!formData.password) {
@@ -159,7 +166,7 @@ const Register = () => {
         }
     };
 
-    const isFormValid = formData.name && formData.email && formData.password && formData.confirmPassword;
+    const isFormValid = formData.name && formData.email && formData.phoneNumber && formData.password && formData.confirmPassword;
 
     return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 animate-gradient py-12 px-4">
@@ -235,6 +242,20 @@ const Register = () => {
                         icon={FiMail}
                         error={errors.email}
                         autoComplete="email"
+                        required
+                    />
+
+                    {/* Phone Number Input */}
+                    <AnimatedInput
+                        type="tel"
+                        name="phoneNumber"
+                        value={formData.phoneNumber}
+                        onChange={handleChange}
+                        placeholder="Phone Number (10 digits)"
+                        icon={FiPhone}
+                        error={errors.phoneNumber}
+                        autoComplete="tel"
+                        maxLength={10}
                         required
                     />
 
