@@ -1,55 +1,64 @@
-# ZapChat - Premium Real-Time Chat & Video Calling
+# ZapChat - The Ultimate Real-Time Communication Platform
 
-ZapChat is a high-performance, production-ready chat application featuring real-time messaging and professional-grade WebRTC video/audio calling.
+ZapChat is a premium, full-stack chat application designed for high-performance messaging and crystal-clear video calling. Built with modern technologies, it focuses on stability, security, and a superior user experience.
 
-## 🚀 Key Features
+## 🚀 Professional WebRTC Calling System
 
-### 📞 Premium WebRTC Calling
-- **Crystal Clear Audio/Video**: High-definition peer-to-peer communication.
-- **Echo Cancellation (AEC)**: Advanced hardware-level echo cancellation and noise suppression for a professional audio experience.
-- **Smart Signaling**: Robust WebRTC negotiation via WebSockets (STOMP/SockJS).
-- **Incoming Call Notifications**: Instant browser notifications with the caller's avatar and name.
-- **Stability Guard**: Built-in protection against race conditions and concurrent call triggers (no ghost sessions).
-- **Auto-Recovery**: Automatic WebRTC service recovery on connection flutters.
+The calling feature in ZapChat is not just a basic implementation; it is a hardened, production-ready system optimized for real-world network conditions.
 
-### 💬 Real-Time Messaging
-- **Instant Delivery**: WebSocket-powered messaging for zero-latency communication.
-- **Private & Group Chats**: Seamless switching between one-on-one and team conversations.
-- **Typing Indicators**: Real-time feedback when someone is typing.
-- **Voice Notes**: WhatsApp-style voice messaging with secure Cloudinary storage.
-- **Reactions & Replies**: Interactive chat features including emoji reactions and message threads.
+### 📞 Advanced Calling Features
+- **Crystal Clear Audio/Video**: Uses peer-to-peer WebRTC technology for low-latency, high-definition communication.
+- **Hardware-Aided Echo Cancellation (AEC)**: Configured with `echoCancellation`, `noiseSuppression`, and `autoGainControl` to ensure professional audio quality without feedback or background noise.
+- **Mono-Channel Optimization**: Forced mono-channel audio to allow the browser's native AEC to perform at its peak efficiency.
+- **Smart Signaling Architecture**: Uses a robust WebSocket (STOMP/SockJS) signaling layer to negotiate media connections, exchange ICE candidates, and handle call state transitions.
+- **Race Condition Protection**: Implemented immediate session tracking via `useRef` to prevent "self-declining" bugs caused by fast backend signaling.
+- **Stability Guard**: Prevents "ghost sessions" by blocking redundant call initiations while a call is already in progress.
+- **Real-Time UI Feedback**: Professional call interface with pulsing animations, duration timers, and remote stream status indicators.
 
-### 🛡️ Modern UI/UX
-- **Dark Mode Aesthetic**: A sleek, premium dark interface optimized for focus.
-- **Glassmorphism**: Modern UI elements with subtle blurs and gradients.
-- **Micro-Animations**: Smooth transitions and pulsing indicators for an "alive" feel.
+### 💬 Messaging Features
+- **Real-Time Delivery**: WebSocket-powered messaging ensures your messages arrive instantly.
+- **Group Management**: Create groups, add/remove members, and exit groups with a seamless UI.
+- **WhatsApp-Style Media**: 
+  - **Voice Notes**: Recorded and uploaded directly with high-quality compression.
+  - **Reactions & Replies**: Engage with messages using emoji reactions or direct thread replies.
+  - **Typing Indicators**: Visual feedback when the other person is crafting a reply.
 
-## 🛠️ Tech Stack
+## 🛠️ Technical Architecture
 
-- **Frontend**: React.js, Tailwind CSS, WebRTC API, StompJS.
-- **Backend**: Spring Boot, Spring Security, WebSocket with STOMP.
-- **Database**: MongoDB (for flexible and scalable data storage).
-- **Real-Time**: SockJS, WebRTC Peer-to-Peer Mesh.
-- **Media Storage**: Cloudinary (for voice notes and avatars).
+### Frontend Layer
+- **React 18**: Utilizing hooks like `useCallback`, `useRef`, and `useMemo` for high-performance renders.
+- **Tailwind CSS**: A custom-built design system with glassmorphic elements and dark mode aesthetics.
+- **WebRTC Service**: A dedicated service class for managing RTCPeerConnections, local streams, and signaling logic.
 
-## 🔧 Getting Started
+### Backend Layer
+- **Spring Boot**: Professional Java framework for the core API logic.
+- **Spring Security & JWT**: Secure authentication and authorization for all endpoints.
+- **STOMP over WebSocket**: A structured messaging protocol for reliable real-time signals.
+- **MongoDB**: Schema-less database for flexible chat history and user data.
 
-### 1. Backend Setup
-```bash
-cd chat-app-backend
-mvn clean install
-mvn spring-boot:run
+## ⚙️ Environment Configuration
+
+### Frontend (.env)
+```env
+VITE_API_BASE_URL=http://localhost:8080/api
+VITE_WS_URL=http://localhost:8080/chat
 ```
 
-### 2. Frontend Setup
-```bash
-cd frontend-chat
-npm install
-npm run dev
+### Backend (application.properties)
+```properties
+spring.data.mongodb.uri=your_mongodb_uri
+cloudinary.cloud_name=your_cloud_name
+cloudinary.api_key=your_api_key
+cloudinary.api_secret=your_api_secret
 ```
 
-## 📜 Development Philosophy
-This project focuses on **Stability**, **Aesthetics**, and **Performance**. We prioritize smooth user transitions and robust state management to ensure a high-quality communication experience.
+## 👨‍💻 Developed By
+
+**Razique Hasan**  
+Full Stack Developer  
+📧 [hasanrazique@gmail.com](mailto:hasanrazique@gmail.com)  
+🌐 [GitHub Profile](https://github.com/raziquehasan)  
+🔗 [LinkedIn](https://www.linkedin.com/in/razique-hasan-a65bab232/)  
 
 ---
-Developed with ❤️ by ZapChat Team
+Developed with ❤️ by Razique Hasan
