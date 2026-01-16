@@ -65,6 +65,17 @@ export const authAPI = {
     verifyOTP: async (data) => {
         const response = await api.post('/api/auth/verify-otp', data);
         return response.data;
+    },
+
+    // Email OTP Authentication
+    sendEmailOTP: async (data) => {
+        const response = await api.post('/api/auth/send-email-otp', data);
+        return response.data;
+    },
+
+    verifyEmailOTP: async (data) => {
+        const response = await api.post('/api/auth/verify-email-otp', data);
+        return response.data;
     }
 };
 
