@@ -140,7 +140,7 @@ public class EmailOTPAuthController {
                     "id", user.getId(),
                     "name", user.getName(),
                     "email", user.getEmail(),
-                    "profilePicture", user.getProfilePicture() != null ? user.getProfilePicture() : ""));
+                    "profilePicture", user.getAvatarUrl() != null ? user.getAvatarUrl() : ""));
 
             return ResponseEntity.ok(response);
 
