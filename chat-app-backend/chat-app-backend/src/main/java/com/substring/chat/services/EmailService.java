@@ -159,26 +159,27 @@ public class EmailService {
                             <p class="message">
                                 Enter this code to verify your email and login to ZapChat:
                             </p>
-                            <div class="otp-box">%s</div>
-                            <div class="warning">
-                                <strong>⚠️ Security Notice:</strong><br>
-                                • This code expires in <strong>2 minutes</strong><br>
-                                • Never share this code with anyone<br>
-                                • ZapChat will never ask for your OTP via phone or email
-                            </div>
-                            <p class="message" style="color: #6c757d; font-size: 14px;">
-                                If you didn't request this code, please ignore this email.
-                            </p>
+                            <div class="otp-box">"""
+                + otp + """
                         </div>
-                        <div class="footer">
-                            <p>© 2024 ZapChat. All rights reserved.</p>
-                            <p>This is an automated email. Please do not reply.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-                """
-                .formatted(otp);
+                                                    <div class="warning">
+                                                        <strong>⚠️ Security Notice:</strong><br>
+                                                        • This code expires in <strong>2 minutes</strong><br>
+                                                        • Never share this code with anyone<br>
+                                                        • ZapChat will never ask for your OTP via phone or email
+                                                    </div>
+                                                    <p class="message" style="color: #6c757d; font-size: 14px;">
+                                                        If you didn't request this code, please ignore this email.
+                                                    </p>
+                                                </div>
+                                                <div class="footer">
+                                                    <p>© 2024 ZapChat. All rights reserved.</p>
+                                                    <p>This is an automated email. Please do not reply.</p>
+                                                </div>
+                                            </div>
+                                        </body>
+                                        </html>
+                                        """;
     }
 
     /**
@@ -229,23 +230,24 @@ public class EmailService {
                             <h1>🎉 Welcome to ZapChat!</h1>
                         </div>
                         <div class="content">
-                            <h2>Hi %s,</h2>
-                            <p>Welcome to ZapChat - your new favorite way to stay connected!</p>
-                            <p>You can now:</p>
-                            <ul>
-                                <li>💬 Chat with friends in real-time</li>
-                                <li>📞 Make voice and video calls</li>
-                                <li>👥 Create and join groups</li>
-                                <li>📁 Share files and media</li>
-                            </ul>
-                            <p>Get started by logging in and connecting with your friends!</p>
-                        </div>
-                        <div class="footer">
-                            <p>© 2024 ZapChat. All rights reserved.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-                """.formatted(name);
+                            <h2>Hi """ + name + """
+                ,</h2>
+                                            <p>Welcome to ZapChat - your new favorite way to stay connected!</p>
+                                            <p>You can now:</p>
+                                            <ul>
+                                                <li>💬 Chat with friends in real-time</li>
+                                                <li>📞 Make voice and video calls</li>
+                                                <li>👥 Create and join groups</li>
+                                                <li>📁 Share files and media</li>
+                                            </ul>
+                                            <p>Get started by logging in and connecting with your friends!</p>
+                                        </div>
+                                        <div class="footer">
+                                            <p>© 2024 ZapChat. All rights reserved.</p>
+                                        </div>
+                                    </div>
+                                </body>
+                                </html>
+                                """;
     }
 }
