@@ -49,19 +49,19 @@ public class OTPService {
             OTPRequest otpRequest = new OTPRequest(phoneNumber, otpCode);
             otpRequestRepository.save(otpRequest);
 
-            // Send via Fast2SMS
-            boolean sent = fast2SMSService.sendOTP(phoneNumber, otpCode);
+            // Send via Fast2SMS (void method - throws exception on failure)
+            fast2SMSService.sendOTP(phoneNumber, otpCode);
 
-            if (sent) {
-                log.info("OTP sent successfully to: {}", phoneNumber);
-                return true;
-            } else {
-                // Cleanup if sending failed
-                otpRequestRepository.deleteByPhoneNumber(phoneNumber);
-                log.error("Failed to send OTP to: {}", phoneNumber);
-                return false;
-            }
+            log.info("OTP sent successfully to: {}", phoneNumber);
+            return true;
+
         } catch (Exception e) {
+            // Cleanup if sending failed
+            try {
+                otpRequestRepository.deleteByPhoneNumber(phoneNumber);
+            } catch (Exception cleanupEx) {
+                log.warn("Failed to cleanup OTP after send failure: {}", cleanupEx.getMessage());
+            }
             log.error("Error sending OTP to {}: {}", phoneNumber, e.getMessage());
             return false;
         }

@@ -20,7 +20,8 @@ public class Fast2SMSService {
      * Normalize phone number - remove +91 and keep only digits
      */
     private String normalizePhone(String phone) {
-        if (phone == null) return "";
+        if (phone == null)
+            return "";
         phone = phone.replace("+91", "").trim();
         phone = phone.replaceAll("[^0-9]", "");
         return phone;
@@ -33,7 +34,7 @@ public class Fast2SMSService {
         try {
             // Normalize phone number (remove +91, keep only 10 digits)
             String normalizedPhone = normalizePhone(phoneNumber);
-            
+
             if (normalizedPhone.length() != 10) {
                 log.error("Invalid phone number after normalization: {}", normalizedPhone);
                 throw new RuntimeException("Phone number must be 10 digits");
@@ -68,18 +69,30 @@ public class Fast2SMSService {
     /**
      * Send custom message via Fast2SMS
      */
+    public void sendMessage(String phoneNumber, String message) {
+        try {
+            String normalizedPhone = normalizePhone(phoneNumber);
+
+            String url = "https://www.fast2sms.com/dev/bulkV2"
+                    + "?authorization=" + apiKey
+                    + "&route=q"
+                    + "&message=" + message
+                    + "&language=english"
+                    + "&flash=0"
+                    + "&numbers=" + normalizedPhone;
+
+            log.info("📨 Sending message via Fast2SMS to: {}", normalizedPhone);
+
+            webClient.get()
                     .uri(url)
-                    .header("authorization", apiKey)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(10))
+                    .doOnNext(res -> log.info("✅ Fast2SMS Response: {}", res))
                     .block();
 
-            log.info("Fast2SMS Message Response: {}", response);
-            return response != null && response.contains("\"return\":true");
-
         } catch (Exception e) {
-            log.error("Error sending message via Fast2SMS: {}", e.getMessage(), e);
-            return false;
+            log.error("Failed to send message via Fast2SMS: {}", e.getMessage());
+            throw new RuntimeException("Failed to send message: " + e.getMessage());
         }
-    }}
+    }
+}
