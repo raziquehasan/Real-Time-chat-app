@@ -16,14 +16,14 @@ public class Fast2SMSService {
 
     public void sendOTP(String phone, String otp) {
 
-        // normalize phone number
         phone = phone.replace("+91", "").replaceAll("[^0-9]", "");
 
         String url = "https://www.fast2sms.com/dev/bulkV2"
                 + "?authorization=" + apiKey
                 + "&route=otp"
                 + "&variables_values=" + otp
-                + "&numbers=" + phone;
+                + "&numbers=" + phone
+                + "&flash=0";
 
         log.info("📱 Sending OTP via Fast2SMS to: {}", phone);
         log.info("Fast2SMS URL: {}", url);
