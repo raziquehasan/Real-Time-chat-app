@@ -1,244 +1,240 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import chatIcon from '../assets/chat.png';
-import { FiMail, FiLock, FiMessageCircle } from 'react-icons/fi';
-import AnimatedInput from '../components/AnimatedInput';
-import AnimatedButton from '../components/AnimatedButton';
+import { FiMail, FiLock, FiPhone } from 'react-icons/fi';
 
 const Login = () => {
+    const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
     const [formData, setFormData] = useState({
         email: '',
         password: '',
+        phoneNumber: ''
     });
-    const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
-
-    // Entrance animation
-    useEffect(() => {
-        setIsVisible(true);
-    }, []);
 
     const handleChange = (e) => {
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value,
+            [e.target.name]: e.target.value
         });
-        // Clear error when user starts typing
-        if (errors[e.target.name]) {
-            setErrors({ ...errors, [e.target.name]: '' });
+    };
+
+    const handleEmailLogin = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            const response = await authAPI.login(formData.email, formData.password);
+            login(response.token, response.user);
+            toast.success('Login successful!');
+            navigate('/');
+        } catch (error) {
+            console.error('Login error:', error);
+            toast.error(error.response?.data?.message || 'Login failed');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const validateForm = () => {
-        const newErrors = {};
-
-        if (!formData.email) {
-            newErrors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Email is invalid';
-        }
-
-        if (!formData.password) {
-            newErrors.password = 'Password is required';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = async (e) => {
+    const handlePhoneLogin = async (e) => {
         e.preventDefault();
 
-        if (!validateForm()) {
-            toast.error('Please fix the errors in the form');
+        if (!formData.phoneNumber || formData.phoneNumber.length !== 10) {
+            toast.error('Please enter a valid 10-digit phone number');
             return;
         }
 
         setLoading(true);
 
         try {
-            const response = await authAPI.login(formData.email, formData.password);
-
-            // Save token and user data
-            login(response.token, {
-                id: response.userId,
-                name: response.name,
-                email: response.email,
-            });
-
-            toast.success('Welcome back! 👋', {
-                icon: '🎉',
-                style: {
-                    borderRadius: '10px',
-                    background: '#1f2937',
-                    color: '#fff',
-                },
-            });
-
-            navigate('/');
+            const response = await authAPI.sendOTP({ phoneNumber: formData.phoneNumber });
+            if (response.success) {
+                toast.success('OTP sent successfully!');
+                navigate('/verify-otp', { state: { phoneNumber: formData.phoneNumber } });
+            } else {
+                toast.error(response.message || 'Failed to send OTP');
+            }
         } catch (error) {
-            console.error('Login error:', error);
-            const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
-            toast.error(errorMessage, {
-                style: {
-                    borderRadius: '10px',
-                    background: '#1f2937',
-                    color: '#fff',
-                },
-            });
-
-            // Shake animation on error
-            setErrors({
-                email: ' ',
-                password: ' '
-            });
-            setTimeout(() => setErrors({}), 500);
+            console.error('Error sending OTP:', error);
+            toast.error(error.response?.data?.message || 'Failed to send OTP');
         } finally {
             setLoading(false);
         }
     };
 
-    const isFormValid = formData.email && formData.password;
-
     return (
-        <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 animate-gradient">
-            {/* Animated Background Elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-float" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
-            </div>
-
-            {/* Login Card */}
-            <div
-                className={`
-          relative z-10 p-10 border border-gray-700/50 w-full max-w-md 
-          rounded-2xl bg-gray-900/80 backdrop-blur-xl shadow-2xl
-          transition-all duration-700 transform
-          ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
-          hover:shadow-blue-500/20 hover:shadow-3xl
-        `}
-            >
-                {/* Glow Effect on Hover */}
-                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
+            <div className="max-w-md w-full">
                 {/* Logo Section */}
                 <div className="text-center mb-8">
-                    <div className="inline-block animate-logoPulse">
-                        <img
-                            src={chatIcon}
-                            className="w-20 h-20 mx-auto drop-shadow-2xl"
-                            alt="Chat Icon"
-                        />
-                    </div>
-
-                    <h1 className="text-4xl font-bold mt-6 mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                        Welcome Back
-                    </h1>
-
-                    <p className="text-gray-400 text-sm flex items-center justify-center gap-2">
-                        <FiMessageCircle className="text-blue-400" />
-                        Sign in to continue your conversations
-                    </p>
+                    <img src={chatIcon} className="w-16 h-16 mx-auto mb-4" alt="Chat Icon" />
+                    <h1 className="text-4xl font-bold text-white mb-2">Welcome Back</h1>
+                    <p className="text-gray-300">Sign in to continue your conversations</p>
                 </div>
 
-                {/* Login Form */}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Email Input */}
-                    <AnimatedInput
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="Email Address"
-                        icon={FiMail}
-                        error={errors.email}
-                        autoComplete="email"
-                        required
-                    />
-
-                    {/* Password Input */}
-                    <AnimatedInput
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        placeholder="Password"
-                        icon={FiLock}
-                        error={errors.password}
-                        autoComplete="current-password"
-                        required
-                    />
-
-                    {/* Forgot Password Link */}
-                    <div className="text-right">
+                {/* Login Card */}
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
+                    {/* Login Method Toggle */}
+                    <div className="flex gap-2 mb-6 bg-white/5 rounded-lg p-1">
                         <button
                             type="button"
-                            className="text-sm text-blue-400 hover:text-blue-300 transition-colors hover:underline"
+                            onClick={() => setLoginMethod('email')}
+                            className={`flex-1 py-2 rounded-lg font-semibold transition ${loginMethod === 'email'
+                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                    : 'text-gray-300 hover:text-white'
+                                }`}
                         >
-                            Forgot password?
+                            Email
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setLoginMethod('phone')}
+                            className={`flex-1 py-2 rounded-lg font-semibold transition ${loginMethod === 'phone'
+                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                    : 'text-gray-300 hover:text-white'
+                                }`}
+                        >
+                            Phone
                         </button>
                     </div>
 
-                    {/* Submit Button */}
-                    <AnimatedButton
-                        type="submit"
-                        loading={loading}
-                        disabled={!isFormValid || loading}
-                        variant="primary"
-                    >
-                        {loading ? 'Signing in...' : 'Sign In'}
-                    </AnimatedButton>
-                </form>
+                    {/* Email Login Form */}
+                    {loginMethod === 'email' && (
+                        <form onSubmit={handleEmailLogin}>
+                            {/* Email Input */}
+                            <div className="mb-4">
+                                <label className="block text-white text-sm font-medium mb-2">
+                                    Email Address
+                                </label>
+                                <div className="flex items-center bg-white/20 rounded-lg p-3 border border-white/30 focus-within:border-purple-400 transition">
+                                    <FiMail className="text-white mr-2" />
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="your@email.com"
+                                        className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none"
+                                        required
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
 
-                {/* Divider */}
-                <div className="relative my-8">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-700"></div>
+                            {/* Password Input */}
+                            <div className="mb-6">
+                                <label className="block text-white text-sm font-medium mb-2">
+                                    Password
+                                </label>
+                                <div className="flex items-center bg-white/20 rounded-lg p-3 border border-white/30 focus-within:border-purple-400 transition">
+                                    <FiLock className="text-white mr-2" />
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="••••••••"
+                                        className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={`w-full py-3 rounded-lg font-semibold text-white transition-all duration-300 ${loading
+                                        ? 'bg-gray-600 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
+                                    }`}
+                            >
+                                {loading ? 'Signing in...' : 'Sign In'}
+                            </button>
+                        </form>
+                    )}
+
+                    {/* Phone Login Form */}
+                    {loginMethod === 'phone' && (
+                        <form onSubmit={handlePhoneLogin}>
+                            {/* Phone Input */}
+                            <div className="mb-6">
+                                <label className="block text-white text-sm font-medium mb-2">
+                                    Phone Number
+                                </label>
+                                <div className="flex items-center bg-white/20 rounded-lg p-3 border border-white/30 focus-within:border-purple-400 transition">
+                                    <span className="text-white font-medium mr-2">+91</span>
+                                    <input
+                                        type="tel"
+                                        name="phoneNumber"
+                                        value={formData.phoneNumber}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '');
+                                            if (value.length <= 10) {
+                                                setFormData({ ...formData, phoneNumber: value });
+                                            }
+                                        }}
+                                        placeholder="9876543210"
+                                        className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none text-lg"
+                                        maxLength={10}
+                                        required
+                                        autoFocus
+                                    />
+                                </div>
+                                <p className="text-gray-400 text-xs mt-2">
+                                    We'll send you a 6-digit OTP
+                                </p>
+                            </div>
+
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
+                                disabled={loading || formData.phoneNumber.length !== 10}
+                                className={`w-full py-3 rounded-lg font-semibold text-white transition-all duration-300 ${loading || formData.phoneNumber.length !== 10
+                                        ? 'bg-gray-600 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
+                                    }`}
+                            >
+                                {loading ? 'Sending OTP...' : 'Send OTP'}
+                            </button>
+                        </form>
+                    )}
+
+                    {/* Divider */}
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-700"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-4 bg-transparent text-gray-400">OR</span>
+                        </div>
                     </div>
-                    <div className="relative flex justify-center text-sm">
-                        <span className="px-4 bg-gray-900 text-gray-400">OR</span>
+
+                    {/* Register Link */}
+                    <div className="text-center">
+                        <p className="text-gray-400 text-sm">
+                            Don't have an account?{' '}
+                            <Link
+                                to="/register"
+                                className="text-purple-400 hover:text-purple-300 font-semibold transition-colors hover:underline"
+                            >
+                                Create one now
+                            </Link>
+                        </p>
                     </div>
                 </div>
 
-                {/* Register Link */}
-                <div className="text-center">
-                    <p className="text-gray-400 text-sm">
-                        Don't have an account?{' '}
-                        <Link
-                            to="/register"
-                            className="text-blue-400 hover:text-blue-300 font-semibold transition-colors hover:underline"
-                        >
-                            Create one now
-                        </Link>
+                {/* Footer */}
+                <div className="text-center mt-6">
+                    <p className="text-gray-500 text-sm">
+                        Secure & Fast Authentication
                     </p>
                 </div>
-
-                {/* Footer Note */}
-                <div className="mt-8 text-center">
-                    <p className="text-xs text-gray-500">
-                        By signing in, you agree to our{' '}
-                        <button className="text-blue-400 hover:text-blue-300 hover:underline">
-                            Terms
-                        </button>
-                        {' '}and{' '}
-                        <button className="text-blue-400 hover:text-blue-300 hover:underline">
-                            Privacy Policy
-                        </button>
-                    </p>
-                </div>
-            </div>
-
-            {/* Keyboard Shortcut Hint */}
-            <div className="absolute bottom-4 right-4 text-xs text-gray-600 hidden md:block">
-                Press <kbd className="px-2 py-1 bg-gray-800 rounded border border-gray-700">Enter</kbd> to sign in
             </div>
         </div>
     );

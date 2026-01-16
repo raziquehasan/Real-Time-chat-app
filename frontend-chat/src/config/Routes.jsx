@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router";
-import PhoneLogin from "../pages/PhoneLogin";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
 import OTPVerify from "../pages/OTPVerify";
 import ChatApp from "../pages/ChatApp";
 import Profile from "../pages/Profile";
@@ -12,10 +13,14 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Public routes - OTP Authentication */}
+      {/* Public routes - Combined Login */}
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <PhoneLogin />}
+        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+      />
+      <Route
+        path="/register"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
       />
       <Route
         path="/verify-otp"
