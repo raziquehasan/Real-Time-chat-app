@@ -6,6 +6,11 @@ spring:
     mongodb:
       uri: ${MONGODB_URI}
   
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+  
   servlet:
     multipart:
       max-file-size: 10MB
@@ -16,13 +21,6 @@ cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}
   api-key: ${CLOUDINARY_API_KEY}
   api-secret: ${CLOUDINARY_API_SECRET}
-
-# Redis Configuration
-spring:
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
 
 # Fast2SMS Configuration
 fast2sms:
