@@ -1,90 +1,73 @@
 package com.substring.chat.services;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.time.Duration;
-
 @Service
-@Slf4j
 public class Fast2SMSService {
+
+    private static final Logger log = LoggerFactory.getLogger(Fast2SMSService.class);
 
     @Value("${fast2sms.api.key}")
     private String apiKey;
 
-    private static final String FAST2SMS_URL = "https://www.fast2sms.com/dev/bulkV2";
-    private final WebClient webClient;
+    private final WebClient webClient = WebClient.create();
 
-    public Fast2SMSService() {
-        this.webClient = WebClient.builder()
-                .baseUrl(FAST2SMS_URL)
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .build();
+    /**
+     * Normalize phone number - remove +91 and keep only digits
+     */
+    private String normalizePhone(String phone) {
+        if (phone == null) return "";
+        phone = phone.replace("+91", "").trim();
+        phone = phone.replaceAll("[^0-9]", "");
+        return phone;
     }
 
     /**
-     * Send OTP via Fast2SMS
-     * 
-     * @param phoneNumber Phone number (10 digits without country code)
-     * @param otp         6-digit OTP
-     * @return true if sent successfully
+     * Send OTP via Fast2SMS using GET request with query parameters
      */
-    public boolean sendOTP(String phoneNumber, String otp) {
+    public void sendOTP(String phoneNumber, String otp) {
         try {
-            // Remove country code if present (+91)
-            String cleanedNumber = phoneNumber.replaceAll("[^0-9]", "");
-            if (cleanedNumber.startsWith("91") && cleanedNumber.length() == 12) {
-                cleanedNumber = cleanedNumber.substring(2);
+            // Normalize phone number (remove +91, keep only 10 digits)
+            String normalizedPhone = normalizePhone(phoneNumber);
+            
+            if (normalizedPhone.length() != 10) {
+                log.error("Invalid phone number after normalization: {}", normalizedPhone);
+                throw new RuntimeException("Phone number must be 10 digits");
             }
 
-            log.info("Sending OTP to: {}", cleanedNumber);
+            // Build Fast2SMS OTP URL with query parameters
+            String url = "https://www.fast2sms.com/dev/bulkV2"
+                    + "?authorization=" + apiKey
+                    + "&route=otp"
+                    + "&variables_values=" + otp
+                    + "&numbers=" + normalizedPhone;
 
-            // Build URL with query parameters
-            String url = String.format(
-                    "?route=otp&variables_values=%s&numbers=%s",
-                    otp,
-                    cleanedNumber);
+            log.info("📱 Sending OTP via Fast2SMS to: {}", normalizedPhone);
 
-            // Make HTTP request
+            // Send GET request
             String response = webClient.get()
                     .uri(url)
-                    .header("authorization", apiKey)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(10))
+                    .doOnNext(res -> log.info("✅ Fast2SMS Response: {}", res))
+                    .doOnError(err -> log.error("❌ Fast2SMS Error: {}", err.getMessage()))
                     .block();
 
-            log.info("Fast2SMS Response: {}", response);
-
-            // Check if response contains success indicator
-            return response != null && (response.contains("\"return\":true") || response.contains("success"));
+            log.info("OTP sent successfully to {}", normalizedPhone);
 
         } catch (Exception e) {
-            log.error("Error sending OTP via Fast2SMS: {}", e.getMessage(), e);
-            return false;
+            log.error("Failed to send OTP via Fast2SMS: {}", e.getMessage());
+            throw new RuntimeException("Failed to send OTP: " + e.getMessage());
         }
     }
 
     /**
      * Send custom message via Fast2SMS
      */
-    public boolean sendMessage(String phoneNumber, String message) {
-        try {
-            String cleanedNumber = phoneNumber.replaceAll("[^0-9]", "");
-            if (cleanedNumber.startsWith("91") && cleanedNumber.length() == 12) {
-                cleanedNumber = cleanedNumber.substring(2);
-            }
-
-            String url = String.format(
-                    "?route=q&message=%s&language=english&flash=0&numbers=%s",
-                    message,
-                    cleanedNumber);
-
-            String response = webClient.get()
                     .uri(url)
                     .header("authorization", apiKey)
                     .retrieve()
@@ -99,5 +82,4 @@ public class Fast2SMSService {
             log.error("Error sending message via Fast2SMS: {}", e.getMessage(), e);
             return false;
         }
-    }
-}
+    }}
