@@ -25,6 +25,9 @@ public class EmailService {
      */
     public void sendOTP(String toEmail, String otp) {
         try {
+            log.info("🔧 Attempting to send OTP email to: {}", toEmail);
+            log.info("📧 From email: {}", fromEmail);
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
@@ -33,11 +36,20 @@ public class EmailService {
             helper.setSubject("Your ZapChat OTP Code");
             helper.setText(buildOTPEmailTemplate(otp), true);
 
+            log.info("📤 Sending email via SMTP...");
             mailSender.send(message);
-            log.info("📧 OTP email sent successfully to: {}", toEmail);
+            log.info("✅ OTP email sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error("❌ Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+            log.error("❌ MessagingException while sending OTP email to {}", toEmail);
+            log.error("❌ Error message: {}", e.getMessage());
+            log.error("❌ Error cause: {}", e.getCause());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to send OTP email: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("❌ Unexpected exception while sending OTP email to {}", toEmail);
+            log.error("❌ Error: {}", e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Failed to send OTP email: " + e.getMessage());
         }
     }
