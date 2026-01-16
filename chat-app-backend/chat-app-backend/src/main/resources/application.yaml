@@ -17,6 +17,29 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY}
   api-secret: ${CLOUDINARY_API_SECRET}
 
+# Redis Configuration
+spring:
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+
+# Fast2SMS Configuration
+fast2sms:
+  api:
+    key: ${FAST2SMS_API_KEY}
+
+# OTP Configuration
+otp:
+  expiry:
+    minutes: 2
+  max:
+    attempts: 3
+  rate:
+    limit:
+      per:
+        hour: 3
+
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationAndValidationPleaseChangeThisInProduction123456789}

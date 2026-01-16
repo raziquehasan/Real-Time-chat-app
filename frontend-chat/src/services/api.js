@@ -55,6 +55,17 @@ export const authAPI = {
         const response = await api.post('/api/auth/logout');
         return response.data;
     },
+
+    // OTP Authentication
+    sendOTP: async (data) => {
+        const response = await api.post('/api/auth/send-otp', data);
+        return response.data;
+    },
+
+    verifyOTP: async (data) => {
+        const response = await api.post('/api/auth/verify-otp', data);
+        return response.data;
+    }
 };
 
 // Users API calls

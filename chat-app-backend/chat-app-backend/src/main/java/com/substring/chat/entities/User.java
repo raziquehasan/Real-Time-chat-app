@@ -27,11 +27,18 @@ public class User {
     @Indexed(unique = true)
     private String email;
 
-    private String password; // BCrypt hashed
+    private String password; // BCrypt hashed (optional for OTP-based auth)
+
+    @Indexed(unique = true)
+    private String phoneNumber; // Primary identifier for OTP auth
+
+    private boolean isVerified; // Phone verification status
 
     private LocalDateTime createdAt;
 
     private LocalDateTime lastSeen;
+
+    private LocalDateTime lastLoginAt; // Track last successful login
 
     private boolean online;
 
