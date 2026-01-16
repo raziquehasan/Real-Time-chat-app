@@ -6,31 +6,6 @@ spring:
     mongodb:
       uri: ${MONGODB_URI}
   
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
-    username: ${REDIS_USERNAME:default}
-    ssl:
-      enabled: ${REDIS_SSL:false}
-  
-  # Gmail SMTP Configuration for Email OTP
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${GMAIL_USERNAME}
-    password: ${GMAIL_APP_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          connectiontimeout: 10000
-          timeout: 10000
-          writetimeout: 10000
-  
   servlet:
     multipart:
       max-file-size: 10MB
@@ -41,17 +16,6 @@ cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}
   api-key: ${CLOUDINARY_API_KEY}
   api-secret: ${CLOUDINARY_API_SECRET}
-
-# OTP Configuration
-otp:
-  expiry:
-    minutes: 2
-  max:
-    attempts: 3
-  rate:
-    limit:
-      per:
-        hour: 3
 
 # JWT Configuration
 jwt:
