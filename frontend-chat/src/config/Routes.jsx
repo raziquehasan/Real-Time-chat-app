@@ -2,7 +2,6 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
-import OTPVerify from "../pages/OTPVerify";
 import ChatApp from "../pages/ChatApp";
 import Profile from "../pages/Profile";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -13,7 +12,7 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Public routes - Combined Login */}
+      {/* Public routes */}
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
@@ -21,10 +20,6 @@ const AppRoutes = () => {
       <Route
         path="/register"
         element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
-      />
-      <Route
-        path="/verify-otp"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <OTPVerify />}
       />
 
       {/* Protected routes */}
