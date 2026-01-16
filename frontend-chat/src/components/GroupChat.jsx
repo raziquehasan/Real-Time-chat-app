@@ -257,8 +257,9 @@ const GroupChat = ({ group, stompClient, currentUser, onShowInfo, onShowMembers 
                     existingMembers={groupMembers}
                     onClose={() => setShowAddMember(false)}
                     onMemberAdded={(user) => {
-                        setGroupMembers(prev => [...prev, { userId: user.id, userName: user.name }]);
-                        // Optionally reload group details to update count
+                        // Reload members list to show the new member
+                        loadMembers();
+                        toast.success(`${user.name} added to group`);
                     }}
                 />
             )}
